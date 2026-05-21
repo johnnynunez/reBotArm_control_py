@@ -1,9 +1,13 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "rebotarm-control-py"
 version = "0.1.0"
-description = "Add your description here"
+description = "Control library for reBot Arm B601 series robotic arms"
 readme = "README.md"
-requires-python = "==3.10.*"
+requires-python = ">=3.10"
 dependencies = [
     "meshcat>=0.3.2",
     "pin>=3.9.0",
@@ -12,3 +16,6 @@ dependencies = [
     "matplotlib>=3.10.8",
     "motorbridge>=0.1.7",
 ]
+
+[tool.setuptools.packages.find]
+include = ["reBotArm_control_py*"]
