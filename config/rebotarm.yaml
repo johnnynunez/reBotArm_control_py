@@ -1,0 +1,7 @@
+# reBotArm 全局配置
+
+# 硬件配置（电机类型、通信参数、PID 等）
+hardware_yaml: "rebotarm_rs.yaml"
+# 运动学配置（URDF 路径、末端执行器帧）
+urdf_path: "urdf/00-arm-rs_asm-v3/urdf/00-arm-rs_asm-v3.urdf"
+end_effector_frame: "gripper_end"

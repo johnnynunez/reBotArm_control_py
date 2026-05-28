@@ -1,5 +1,5 @@
 """reBotArm 机械臂控制器封装层。"""
 
-from .arm_endpos_controller import ArmEndPos
+from .rebotarm_endpose_controller import RebotArmEndPose
 
-__all__ = ["ArmEndPos"]
+__all__ = ["RebotArmEndPose"]

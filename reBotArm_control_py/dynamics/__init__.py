@@ -5,6 +5,8 @@ from .robot_model import (
     get_default_gravity,
     set_gravity,
     get_gravity,
+    neutral_configuration,
+    random_configuration,
 )
 from .inertia import (
     compute_mass_matrix,
@@ -46,6 +48,8 @@ __all__ = [
     "get_default_gravity",
     "set_gravity",
     "get_gravity",
+    "neutral_configuration",
+    "random_configuration",
     # inertia
     "compute_mass_matrix",
     "compute_coriolis_matrix",

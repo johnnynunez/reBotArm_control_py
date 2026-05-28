@@ -1,104 +1,98 @@
-"""reBot-DevArm 机器人模型加载模块。
+"""reBot-DevArm 机器人模型加载模块 — 基于 Pinocchio。
 
-本模块负责从 URDF 文件加载 Pinocchio 刚体模型，
-并提供关节信息查询工具。
-机器人构型：6 个旋转关节（joint1–joint6）+ 1 个固定末端关节（end_joint）。
+所有参数从 config/rebotarm.yaml 读取，无需修改代码。
 """
 
-from __future__ import annotations
-
-import os
 from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
 import pinocchio as pin
+import yaml
+
+_config_path = Path(__file__).resolve().parents[2] / "config" / "rebotarm.yaml"
+_PROJECT_ROOT = _config_path.resolve().parents[1]
+
+_cached_config: dict | None = None
 
 
-# --------------------------------------------------------------------------- #
-# 路径工具
-# --------------------------------------------------------------------------- #
+def _load_config() -> dict:
+    global _cached_config
+    if _cached_config is not None:
+        return _cached_config
+    defaults = {
+        "hardware_yaml": "rebotarm_rs.yaml",
+        "urdf_path": "",
+        "end_effector_frame": "gripper_end",
+    }
+    if _config_path.exists():
+        loaded = yaml.safe_load(_config_path.read_text()) or {}
+        for k in defaults:
+            if k in loaded:
+                defaults[k] = loaded[k]
+    _cached_config = defaults
+    return defaults
 
-def _get_default_urdf_path() -> str:
-    """返回内置 reBot-DevArm URDF 文件的绝对路径，并确保包名符号链接存在。"""
-    base = Path(__file__).resolve().parents[2] / "urdf"
-    urdf_pkg_in_urdf = "reBot-DevArm_description_fixend"
-    link_path = base / urdf_pkg_in_urdf
-    real_path = base / "reBot-DevArm_fixend_description"
-    if not link_path.exists() and real_path.exists():
-        os.symlink(real_path.name, str(link_path))
-    return str(base / "reBot-DevArm_fixend_description" / "urdf" / "reBot-DevArm_fixend.urdf")
 
-
-# --------------------------------------------------------------------------- #
-# 模型加载
-# --------------------------------------------------------------------------- #
-
-def load_robot_model(
-    urdf_path: str | None = None,
-) -> pin.Model:
-    """从 reBot-DevArm URDF 构建 Pinocchio 模型。
-
-    参数:
-        urdf_path: URDF 文件的绝对或相对路径。
-                   默认为内置 URDF 文件。
-
-    返回:
-        pin.Model，包含 6 个旋转关节（nq=6, nv=6）。
-        固定 ``end_joint`` 被当作操作空间帧处理，不占用位形变量。
-    """
+def _resolve_urdf(urdf_path: str | None = None) -> Tuple[str, str]:
     if urdf_path is None:
-        urdf_path = _get_default_urdf_path()
+        urdf_path = _load_config().get("urdf_path", "")
 
-    # 相对路径以工作目录为基准解析。
-    if not os.path.isabs(urdf_path):
-        urdf_path = str(Path.cwd() / urdf_path)
+    if not urdf_path:
+        raise ValueError("urdf_path is empty. Set urdf_path in config/rebotarm.yaml")
 
-    model = pin.buildModelFromUrdf(urdf_path)
-    return model
+    if not Path(urdf_path).is_absolute():
+        urdf_path = str(_PROJECT_ROOT / urdf_path)
+
+    pkg_dir = str(Path(urdf_path).resolve().parent)
+    # If the URDF lives in a "urdf/" subdirectory (common convention),
+    # the meshes/ folder is typically at the package root (one level up).
+    # Detect this layout and adjust pkg_dir accordingly.
+    if pkg_dir.endswith("/urdf") or pkg_dir.endswith("\\urdf"):
+        pkg_dir = str(Path(pkg_dir).parent)
+    return urdf_path, pkg_dir
 
 
-# --------------------------------------------------------------------------- #
-# 查询工具
-# --------------------------------------------------------------------------- #
+def load_robot_model(urdf_path: str | None = None) -> pin.Model:
+    path, _ = _resolve_urdf(urdf_path)
+    return pin.buildModelFromUrdf(path)
+
+
+def get_end_effector_frame() -> str:
+    return _load_config().get("end_effector_frame", "gripper_end")
+
+
+def get_joint_count() -> int:
+    model = load_robot_model()
+    return model.nq
+
 
 def get_joint_names(model: pin.Model) -> List[str]:
-    """返回所有非固定关节的名称列表（跳过 ``universe``）。"""
-    return [
-        name
-        for name, jtype in zip(model.names[1:], model.joints[1:])
-        if jtype.idx_q >= 0  # idx_q < 0 表示固定关节
-    ]
+    return [n for n, j in zip(model.names[1:], model.joints[1:]) if j.idx_q >= 0]
 
 
 def get_joint_limits(model: pin.Model) -> List[Tuple[float, float]]:
-    """返回每个非固定关节的位置限位 (下限, 上限)。
-
-    URDF 中无限位定义的连续旋转关节返回 ``(-inf, inf)``。
-    """
-    names = get_joint_names(model)
     limits = []
-    for name in names:
-        joint_id = model.getJointId(name)
-        lo = float(model.lowerPositionLimit[joint_id])
-        hi = float(model.upperPositionLimit[joint_id])
-        if np.isinf(lo) and np.isinf(hi):
-            limits.append((-np.inf, np.inf))
-        else:
-            limits.append((lo, hi))
+    for name in get_joint_names(model):
+        jid = model.getJointId(name)
+        lo, hi = float(model.lowerPositionLimit[jid]), float(model.upperPositionLimit[jid])
+        limits.append((-np.inf, np.inf) if np.isinf(lo) and np.isinf(hi) else (lo, hi))
     return limits
 
 
-def get_frame_id(model: pin.Model, frame_name: str) -> int:
-    """返回指定名称帧的索引。"""
-    return model.getFrameId(frame_name)
-
-
 def get_end_effector_frame_id(model: pin.Model) -> int:
-    """返回末端操作帧 ``end_link`` 的索引。"""
-    return model.getFrameId("end_link")
+    return model.getFrameId(get_end_effector_frame())
 
 
 def get_all_frame_names(model: pin.Model) -> List[str]:
-    """返回模型中所有已注册帧的名称。"""
     return [f.name for f in model.frames]
+
+
+def pad_q_for_model(model: pin.Model, q: np.ndarray, controlled_joints: int | None = None) -> np.ndarray:
+    nq = model.nq
+    n_ctrl = controlled_joints if controlled_joints is not None else nq
+    if q.shape[0] >= nq:
+        return q
+    padded = np.zeros(nq)
+    padded[:min(q.shape[0], n_ctrl)] = q[:min(q.shape[0], n_ctrl)]
+    return padded

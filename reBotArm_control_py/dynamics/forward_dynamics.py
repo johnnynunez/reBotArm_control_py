@@ -19,6 +19,7 @@ import pinocchio as pin
 
 from .robot_model import load_dynamics_model, create_data
 from .inertia import _check_q_shape, _check_v_shape
+from ..kinematics.robot_model import pad_q_for_model
 
 
 def compute_forward_dynamics(
@@ -49,6 +50,8 @@ def compute_forward_dynamics(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
     if v is None:
         v = np.zeros(model.nv)
     if tau is None:
@@ -106,6 +109,8 @@ def forward_dynamics_from_nle(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
     if v is None:
         v = np.zeros(model.nv)
     if tau is None:

@@ -18,6 +18,7 @@ import numpy as np
 import pinocchio as pin
 
 from .robot_model import load_dynamics_model, create_data
+from ..kinematics.robot_model import pad_q_for_model
 
 
 # --------------------------------------------------------------------------- #
@@ -53,6 +54,8 @@ def compute_mass_matrix(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
 
     _check_q_shape(model, q, "compute_mass_matrix")
     pin.crba(model, data, q)
@@ -89,6 +92,8 @@ def compute_coriolis_matrix(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
     if v is None:
         v = np.zeros(model.nv)
 
@@ -129,6 +134,8 @@ def compute_gravity_vector(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
 
     _check_q_shape(model, q, "compute_gravity_vector")
 
@@ -171,6 +178,8 @@ def compute_nle(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
     if v is None:
         v = np.zeros(model.nv)
 
@@ -228,6 +237,8 @@ def compute_all_terms(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
     if v is None:
         v = np.zeros(model.nv)
 

@@ -111,6 +111,7 @@ def solve_ik(
     target: pin.SE3,
     q_init: np.ndarray,
     params: Optional[IKParams] = None,
+    controlled_joints: int | None = None,
 ) -> IKResult:
     """阻尼最小二乘 CLIK 求解器。
 
@@ -119,25 +120,38 @@ def solve_ik(
       - 回退线搜索（最多折半 4 次）
 
     参数:
-        model:        Pinocchio 机器人模型。
-        data:         Pinocchio 数据缓存（需外部创建并传入）。
-        end_frame_id: 末端帧索引。
-        target:       目标 SE3 位姿。
-        q_init:       初始关节配置，维度须为 model.nq。
-        params:       IK 参数，默认 IKParams{}。
+        model:            Pinocchio 机器人模型。
+        data:             Pinocchio 数据缓存（需外部创建并传入）。
+        end_frame_id:     末端帧索引。
+        target:           目标 SE3 位姿。
+        q_init:           初始关节配置。若维度小于 model.nq，超出部分视为被动关节补 0；
+                          若维度大于 model.nq，多余部分被忽略。
+        params:           IK 参数，默认 IKParams{}。
+        controlled_joints: 受控关节数量（默认为 model.nq）。
+                          传入比 model.nq 小的值时，IK 在完整模型空间求解，
+                          但 q_init 只需提供受控关节数，返回值也只截取受控部分。
+                          这使得调用方无需感知 URDF 中被动关节的存在。
 
     返回:
-        IKResult，其中 q 为求解得到的关节角。
+        IKResult，其中 q 为求解得到的关节角（维度与 q_init 一致）。
     """
     if params is None:
         params = IKParams()
 
-    q = q_init.copy()
+    nq = model.nq
+    n_ctrl = controlled_joints if controlled_joints is not None else nq
+
+    # 补齐 q_init 到 model.nq
+    q = np.zeros(nq)
+    n_provided = min(q_init.shape[0], n_ctrl)
+    q[:n_provided] = q_init[:n_provided]
     prev_err, err = _compute_error(model, data, end_frame_id, q, target)
 
+    # 初始误差即已满足容差时直接返回
+    if prev_err < params.tolerance:
+        return IKResult(q=q[:n_ctrl], success=True, error=prev_err, iterations=0)
+
     for iteration in range(params.max_iter):
-        if prev_err < params.tolerance:
-            return IKResult(q=q, success=True, error=prev_err, iterations=iteration)
 
         # LOCAL 系体雅可比
         pin.computeJointJacobians(model, data, q)
@@ -166,7 +180,10 @@ def solve_ik(
             # 线搜索全部失败，保持当前构型继续迭代
             pass
 
-    return IKResult(q=q, success=False, error=prev_err, iterations=params.max_iter)
+    # 循环结束后再次检查（可能刚收敛或误差已达机器精度）
+    if prev_err < params.tolerance:
+        return IKResult(q=q[:n_ctrl], success=True, error=prev_err, iterations=params.max_iter)
+    return IKResult(q=q[:n_ctrl], success=False, error=prev_err, iterations=params.max_iter)
 
 
 def solve_ik_with_retry(
@@ -229,13 +246,12 @@ def solve_ik_with_retry(
 def compute_ik(
     q_init: np.ndarray | None,
     target_pos: np.ndarray,
-    target_rot: Optional[np.ndarray] = None,
+    target_rot: np.ndarray | None = None,
     *,
     roll: float = 0.0,
     pitch: float = 0.0,
     yaw: float = 0.0,
-    frame_name: str = "end_link",
-    params: Optional[IKParams] = None,
+    params: IKSolverParams | None = None,
 ) -> IKResult:
     """使用默认模型计算 IK（便捷函数）。
 
@@ -246,7 +262,6 @@ def compute_ik(
         roll:        ZYX 欧拉角之 roll，仅当 rot=None 时使用。
         pitch:       ZYX 欧拉角之 pitch。
         yaw:         ZYX 欧拉角之 yaw。
-        frame_name:  末端帧名称，假设 ``end_link``。
         params:      IK 参数。
 
     返回:
