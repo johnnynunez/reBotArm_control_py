@@ -6,6 +6,10 @@
 #   - 使用其他执行器(吸盘等)时: 注释掉 gripper 组，arm 组改为6个关节
 #   - arm.gripper 在无配置时自动替换为 NoOpGroup，所有操作均为空操作
 
+# 运动学配置（URDF 路径、末端执行器帧）
+urdf_path: "urdf/00-arm-rs_asm-v3/urdf/00-arm-rs_asm-v3.urdf"
+end_effector_frame: "gripper_end"
+
 channel: can0
 rate: 500
 

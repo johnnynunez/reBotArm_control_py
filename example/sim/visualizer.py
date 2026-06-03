@@ -48,7 +48,7 @@ class Visualizer:
 
         Args:
             open_browser: 是否在终端打印 MeshCat 访问地址。
-            urdf_path:    URDF 文件路径，留空则从 config/rebotarm.yaml 读取。
+            urdf_path:    URDF 文件路径，留空则从 hardware_yaml 指向的硬件配置文件中读取。
         """
         urdf_path, pkg_dir = _resolve_urdf(urdf_path)
 

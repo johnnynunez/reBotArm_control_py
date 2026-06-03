@@ -1,6 +1,7 @@
 """reBot-DevArm 机器人模型加载模块 — 基于 Pinocchio。
 
-所有参数从 config/rebotarm.yaml 读取，无需修改代码。
+urdf_path 和 end_effector_frame 从 hardware_yaml 指向的硬件配置文件中读取，
+rebotarm.yaml 只提供 hardware_yaml 字段。
 """
 
 from pathlib import Path
@@ -10,44 +11,43 @@ import numpy as np
 import pinocchio as pin
 import yaml
 
-_config_path = Path(__file__).resolve().parents[2] / "config" / "rebotarm.yaml"
-_PROJECT_ROOT = _config_path.resolve().parents[1]
+_cfg_dir = Path(__file__).resolve().parents[2] / "config"
+_global_cfg = _cfg_dir / "rebotarm.yaml"
+_project_root = _cfg_dir.parent
 
-_cached_config: dict | None = None
+_hw_cfg_cache: dict | None = None
 
 
-def _load_config() -> dict:
-    global _cached_config
-    if _cached_config is not None:
-        return _cached_config
-    defaults = {
-        "hardware_yaml": "rebotarm_rs.yaml",
-        "urdf_path": "",
-        "end_effector_frame": "gripper_end",
-    }
-    if _config_path.exists():
-        loaded = yaml.safe_load(_config_path.read_text()) or {}
-        for k in defaults:
-            if k in loaded:
-                defaults[k] = loaded[k]
-    _cached_config = defaults
-    return defaults
+def _hw_config() -> dict:
+    """Load kinematics fields (urdf_path, end_effector_frame) from the hardware YAML."""
+    global _hw_cfg_cache
+    if _hw_cfg_cache is not None:
+        return _hw_cfg_cache
+
+    hw_yaml = "rebotarm_rs.yaml"
+    if _global_cfg.exists():
+        global_data = yaml.safe_load(_global_cfg.read_text()) or {}
+        hw_yaml = global_data.get("hardware_yaml", hw_yaml)
+
+    hw_path = _cfg_dir / hw_yaml
+    if not hw_path.exists():
+        raise FileNotFoundError(f"Hardware config not found: {hw_path}")
+
+    _hw_cfg_cache = yaml.safe_load(hw_path.read_text()) or {}
+    return _hw_cfg_cache
 
 
 def _resolve_urdf(urdf_path: str | None = None) -> Tuple[str, str]:
     if urdf_path is None:
-        urdf_path = _load_config().get("urdf_path", "")
+        urdf_path = _hw_config().get("urdf_path", "")
 
     if not urdf_path:
-        raise ValueError("urdf_path is empty. Set urdf_path in config/rebotarm.yaml")
+        raise ValueError("urdf_path is empty. Set it in the hardware config file.")
 
     if not Path(urdf_path).is_absolute():
-        urdf_path = str(_PROJECT_ROOT / urdf_path)
+        urdf_path = str(_project_root / urdf_path)
 
     pkg_dir = str(Path(urdf_path).resolve().parent)
-    # If the URDF lives in a "urdf/" subdirectory (common convention),
-    # the meshes/ folder is typically at the package root (one level up).
-    # Detect this layout and adjust pkg_dir accordingly.
     if pkg_dir.endswith("/urdf") or pkg_dir.endswith("\\urdf"):
         pkg_dir = str(Path(pkg_dir).parent)
     return urdf_path, pkg_dir
@@ -59,7 +59,7 @@ def load_robot_model(urdf_path: str | None = None) -> pin.Model:
 
 
 def get_end_effector_frame() -> str:
-    return _load_config().get("end_effector_frame", "gripper_end")
+    return _hw_config().get("end_effector_frame", "gripper_end")
 
 
 def get_joint_count() -> int:
