@@ -116,7 +116,7 @@ class RebotArmEndPose:
         self._send_thread: Optional[threading.Thread] = None
         self._stop_send = threading.Event()
 
-        self._home_vel: float = 0.3
+        self._home_vel: float = 0.5
         self._vlim_override: Optional[np.ndarray] = None
 
     # ── 生命周期 ───────────────────────────────────────────────────────────
@@ -167,37 +167,59 @@ class RebotArmEndPose:
         if self._has_gripper:
             self._gripper_target = 0.0
 
-    def safe_home(self, vlim: Optional[float] = None) -> None:
+    def safe_home(
+        self,
+        max_vel: float = 0.5,
+        send_freq: float = 50.0,
+        settle_thresh: float = 0.01,
+        timeout: float = 15.0,
+    ) -> None:
         if not self._running:
             return
-        self._q_target[:] = 0.0
-        self._qd_target[:] = 0.0
-        self._stop_send.set()
-        if self._send_thread is not None:
-            self._send_thread.join(timeout=5.0)
 
-        deadline = time.monotonic() + 30.0
-        while True:
-            q, _, _ = self.rebotarm.get_state()
-            if np.max(np.abs(q[:self._n])) < 0.01:
-                break
+        q_curr, _, _ = self.rebotarm.get_state()
+        q_curr = q_curr[: self._n]
+        q_start = q_curr.copy()
+
+        home_pos = np.zeros(self._n)
+        q_err = np.abs(home_pos - q_start)
+        max_err = float(np.max(q_err))
+        if max_err < 0.01:
+            return
+
+        t_ramp = max_err / max_vel
+        t_total = t_ramp * 2.0
+        dt_send = 1.0 / send_freq
+        num_steps = max(2, int(t_total / dt_send))
+
+        t = np.linspace(0, t_total, num_steps)
+        traj = np.zeros((num_steps, self._n))
+        for i in range(self._n):
+            err_i = home_pos[i] - q_start[i]
+            s = t / t_total
+            # 最小jerk (minimum jerk) 轨迹:
+            #   q(s) = q0 + Δq * (10s³ - 15s⁴ + 6s⁵)
+            # 速度: v(s) = Δq/t_total * (30s² - 60s³ + 30s⁴) → 在 s=0 和 s=1 处均为零
+            traj[:, i] = q_start[i] + err_i * (10.0 * s ** 3 - 15.0 * s ** 4 + 6.0 * s ** 5)
+
+        interval = t_total / num_steps if num_steps > 0 else dt_send
+        deadline = time.monotonic() + timeout
+        self._vlim_override = np.full(self._n, max_vel, dtype=np.float64)
+        for i in range(num_steps):
             if time.monotonic() > deadline:
-                print("[RebotArmEndPose] safe_home 超时")
+                print("[safe_home] 轨迹发送超时")
+                break
+            self._q_target[:] = traj[i]
+            time.sleep(interval)
+
+        self._q_target[:] = 0.0
+        settle_deadline = time.monotonic() + 3.0
+        while time.monotonic() < settle_deadline:
+            q_now, _, _ = self.rebotarm.get_state()
+            if np.max(np.abs(q_now[: self._n])) < settle_thresh:
                 break
             time.sleep(self._dt)
-
-        if self._arm_control_mode == "mit":
-            self._arm_group.send_mit(
-                self._q_target,
-                vel=self._qd_target,
-                kp=self._arm_group._mit_kp,
-                kd=self._arm_group._mit_kd,
-            )
-        else:
-            v = self._home_vel if vlim is None else float(vlim)
-            self._vlim_override = np.full(self._n, v, dtype=np.float64)
-            self._arm_group.send_pos_vel(self._q_target, vlim=self._vlim_override)
-            self._vlim_override = None
+        self._vlim_override = None
 
     def move_to_ik(
         self,
