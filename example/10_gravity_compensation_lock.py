@@ -9,6 +9,8 @@
 控制律（MIT 模式）：
     rebotarm.arm 组: 重力前馈 + MIT 位置闭环
     rebotarm.gripper 组: MIT 控制
+
+兼容: rebotarm_dm.yaml (Damiao 电机) 和 rebotarm_rs.yaml (RobStride 电机)
 """
 import signal
 import sys
@@ -26,19 +28,33 @@ from reBotArm_control_py.dynamics import (
     compute_generalized_gravity,
     get_default_gravity,
 )
-from reBotArm_control_py.kinematics import load_robot_model
+from reBotArm_control_py.kinematics import load_robot_model, get_end_effector_frame, pad_q_for_model
 
+# ── 安全测试配置 ─────────────────────────────────────────────────────────────
+# 只使能以下关节；留空 [] 则全部使能。用于逐个电机安全测试。
+ENABLED_JOINTS: list[str] = []
+# 示例: 只使能 joint1 进行单电机测试
+# ENABLED_JOINTS: list[str] = ["joint1"]
+# ─────────────────────────────────────────────────────────────────────────────
 
-_running = True
-_q_target: np.ndarray = None
-_lock_counter = 0
-_integral: np.ndarray = None
-
+# ── 控制参数 ────────────────────────────────────────────────────────────────
 _VEL_THRESHOLD = 0.04
 _W_VEL_THRESHOLD = 0.08
-_EE_FRAME = "end_link"
-_KP = 7.0
-_KD = 0.8
+_EE_FRAME: str | None = None  # 由运行时从配置读取
+_EE_FRAME_ID: int | None = None
+_KP = 8.0
+_KD = 1.0
+_GRIPPER_KP = 0.0
+_GRIPPER_KD = 0.0
+
+_running = True
+_q_target: np.ndarray | None = None
+_lock_counter = 0
+_integral: np.ndarray | None = None
+_model: pin.Model | None = None  # dynamics model (nq=8, includes gripper)
+_kin_model: pin.Model | None = None  # kinematics model (same nq=8)
+_kin_data: pin.Data | None = None
+_data: pin.Data | None = None
 
 
 def _sigint_handler(signum, frame):
@@ -50,21 +66,32 @@ def _sigint_handler(signum, frame):
 signal.signal(signal.SIGINT, _sigint_handler)
 
 
-_model = load_robot_model()
-_data = _model.createData()
-_ee_frame_id = _model.getFrameId(_EE_FRAME)
+def _init_models() -> None:
+    global _model, _kin_model, _data, _kin_data, _EE_FRAME, _EE_FRAME_ID
+    if _model is not None:
+        return
+    _model = load_dynamics_model()
+    _kin_model = load_robot_model()
+    _data = _model.createData()
+    _kin_data = _kin_model.createData()
+    _EE_FRAME = get_end_effector_frame()
+    _EE_FRAME_ID = _kin_model.getFrameId(_EE_FRAME)
 
 
 def gravity_compensation_controller(r: RebotArm, dt: float) -> None:
-    global _q_target, _lock_counter, _integral
+    global _q_target, _lock_counter, _integral, _model, _data, _kin_model, _kin_data
 
-    q = r.arm.get_positions()
-    qd = r.arm.get_velocities()
+    _init_models()
+
+    q_arm = r.arm.get_positions()
+    q_full = pad_q_for_model(_kin_model, q_arm, controlled_joints=r.arm.num_joints)
+    qd_arm = r.arm.get_velocities()
+    qd_full = pad_q_for_model(_kin_model, qd_arm, controlled_joints=r.arm.num_joints)
     n = r.arm.num_joints
 
-    tau_g = compute_generalized_gravity(q=q)
+    tau_g = compute_generalized_gravity(q=q_full)
 
-    q_error = _q_target - q
+    q_error = _q_target - q_arm
 
     if _integral is None:
         _integral = np.zeros(n)
@@ -72,15 +99,15 @@ def gravity_compensation_controller(r: RebotArm, dt: float) -> None:
     _integral += q_error * 1.0
     np.clip(_integral, -0.5, 0.5, out=_integral)
 
-    pin.computeJointJacobians(_model, _data, q)
-    pin.updateFramePlacements(_model, _data)
-    J = pin.getFrameJacobian(_model, _data, _ee_frame_id, pin.ReferenceFrame.WORLD)
-    v_spatial = J @ qd
+    pin.computeJointJacobians(_kin_model, _kin_data, q_full)
+    pin.updateFramePlacements(_kin_model, _kin_data)
+    J = pin.getFrameJacobian(_kin_model, _kin_data, _EE_FRAME_ID, pin.ReferenceFrame.WORLD)
+    v_spatial = J @ qd_full
     v_ee_norm = float(np.linalg.norm(v_spatial[:3]))
     w_ee_norm = float(np.linalg.norm(v_spatial[3:]))
 
     if v_ee_norm > _VEL_THRESHOLD or w_ee_norm > _W_VEL_THRESHOLD:
-        _q_target = q.copy()
+        _q_target = q_arm.copy()
         _lock_counter = 0
         _integral *= 0.9
     else:
@@ -91,9 +118,17 @@ def gravity_compensation_controller(r: RebotArm, dt: float) -> None:
         vel=np.zeros(n),
         kp=np.full(n, _KP),
         kd=np.full(n, _KD),
-        tau=tau_g + _integral,
+        tau=tau_g[:n] + _integral,
     )
-    r.gripper.send_mit(r.gripper.get_positions())
+    if r.has_gripper:
+        gripper_q = r.gripper.get_positions()
+        gripper_n = r.gripper.num_joints
+        r.gripper.send_mit(
+            pos=gripper_q,
+            vel=np.zeros(gripper_n),
+            kp=np.full(gripper_n, _GRIPPER_KP),
+            kd=np.full(gripper_n, _GRIPPER_KD),
+        )
 
     gravity_compensation_controller._counter += 1
     if gravity_compensation_controller._counter % 20 == 0:
@@ -102,7 +137,7 @@ def gravity_compensation_controller(r: RebotArm, dt: float) -> None:
             f"[{gravity_compensation_controller._counter:4d}] "
             f"{lock_status}  "
             f"v={v_ee_norm:.4f}m/s  w={w_ee_norm:.4f}rad/s  "
-            f"tau_g=" + "  ".join(f"{t:+.3f}" for t in tau_g) + "  N·m"
+            f"tau_g=" + "  ".join(f"{t:+.3f}" for t in tau_g[:n]) + "  N·m"
         )
 
 
@@ -123,12 +158,23 @@ def main() -> None:
     g_vec = get_default_gravity()
     print(f"\n[模型] nq={dyn_model.nq}, nv={dyn_model.nv}")
     print(f"[重力] {g_vec}  m/s²")
+    ee_frame = get_end_effector_frame()
+    print(f"[末端帧] {ee_frame}")
 
     rebotarm = RebotArm()
     rebotarm.connect()
     rebotarm.arm.mode_mit()
     rebotarm.gripper.mode_mit()
-    rebotarm.enable_all()
+    rebotarm.disable_all()
+    time.sleep(0.1)
+    if ENABLED_JOINTS:
+        for name in ENABLED_JOINTS:
+            if name in rebotarm._motor_map:
+                rebotarm._motor_map[name].enable()
+        print(f"[安全模式] 仅使能电机: {ENABLED_JOINTS}")
+    else:
+        rebotarm.enable_all()
+        print("[使能] 全部电机已使能")
     _q_target = rebotarm.arm.get_positions()
     print(f"[目标角度] 初始锁定: {np.rad2deg(_q_target).round(2)} deg")
 

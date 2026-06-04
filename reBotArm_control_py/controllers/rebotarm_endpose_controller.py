@@ -51,6 +51,7 @@ from typing import Optional
 
 import numpy as np
 
+from ..dynamics import compute_generalized_gravity
 from ..kinematics import (
     compute_fk,
     pos_rot_to_se3,
@@ -80,10 +81,12 @@ class RebotArmEndPose:
         dt: float = 0.01,
         profile: TrajProfile = TrajProfile.MIN_JERK,
         arm_control_mode: str = "posvel",
+        use_gravity_ff: bool = True,
     ) -> None:
         if arm_control_mode not in ("mit", "posvel"):
             raise ValueError("arm_control_mode must be 'mit' or 'posvel'")
         self._arm_control_mode = arm_control_mode
+        self._use_gravity_ff = use_gravity_ff
         self.rebotarm = rebotarm
         self._arm_group = rebotarm.groups.get("arm", None)
         self._gripper_group = rebotarm.groups.get("gripper", None)
@@ -323,11 +326,20 @@ class RebotArmEndPose:
     def _loop_cb(self, _: RebotArm, dt: float) -> None:
         if self._arm_group:
             if self._arm_control_mode == "mit":
+                tau_ff = np.zeros(self._n)
+                if self._use_gravity_ff:
+                    q_now = self._arm_group.get_positions(request_feedback=False)
+                    q_now = pad_q_for_model(self._model, q_now, self._n)
+                    tau_ff = compute_generalized_gravity(self._model, q_now, self._data)[: self._n]
+                    tau_ff[1] *= 1.55  # joint2 额外补偿
+                    tau_ff[2] *= 1.55  # joint3 额外补偿
+                    
                 self._arm_group.send_mit(
                     self._q_target,
                     vel=self._qd_target,
                     kp=self._arm_group._mit_kp,
                     kd=self._arm_group._mit_kd,
+                    tau=tau_ff,
                 )
             else:
                 vlim = (

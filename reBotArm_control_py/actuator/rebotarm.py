@@ -405,16 +405,18 @@ class JointGroup:
                 except Exception:
                     pass
 
-    def get_positions(self) -> np.ndarray:
-        self._request_feedback()
+    def get_positions(self, request_feedback: bool = True) -> np.ndarray:
+        if request_feedback:
+            self._request_feedback()
         return np.array([
             self._mm[jc.name].get_state().pos
             if self._mm[jc.name].get_state() is not None else 0.0
             for jc in self._jcfgs
         ], dtype=np.float64)
 
-    def get_velocities(self) -> np.ndarray:
-        self._request_feedback()
+    def get_velocities(self, request_feedback: bool = True) -> np.ndarray:
+        if request_feedback:
+            self._request_feedback()
         return np.array([
             self._mm[jc.name].get_state().vel
             if self._mm[jc.name].get_state() is not None else 0.0
@@ -610,12 +612,16 @@ class RebotArm:
 
     # ── 全局状态读取 ───────────────────────────────────────────────────
 
-    def get_state(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        for m in self._motor_map.values():
-            try:
-                m.request_feedback()
-            except Exception:
-                pass
+    def get_state(
+        self,
+        request_feedback: bool = True,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        if request_feedback:
+            for m in self._motor_map.values():
+                try:
+                    m.request_feedback()
+                except Exception:
+                    pass
         for ctrl in self._ctrl_map.values():
             try:
                 ctrl.poll_feedback_once()

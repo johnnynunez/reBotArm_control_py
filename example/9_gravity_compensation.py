@@ -50,16 +50,16 @@ signal.signal(signal.SIGINT, _sigint_handler)
 
 
 def gravity_compensation_controller(r: RebotArm, dt: float) -> None:
-    q = r.arm.get_positions()
+    q = r.arm.get_positions(request_feedback=False)
     tau_g = compute_generalized_gravity(q=q)
-    tau_g[1] *= 1.5
-    tau_g[2] *= 1.5  # joint3 额外补偿
+    tau_g[1] *= 1.55  # joint2 额外补偿
+    tau_g[2] *= 1.55  # joint3 额外补偿
 
     r.arm.send_mit(
         pos=q,
         vel=np.zeros(r.arm.num_joints),
         kp=np.full(r.arm.num_joints, 2.0),
-        kd=np.full(r.arm.num_joints, 1.5),
+        kd=np.full(r.arm.num_joints, 1.0),
         tau=tau_g,
     )
     if r.has_gripper:
