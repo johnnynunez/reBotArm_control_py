@@ -6,8 +6,10 @@
 
 输入: 末端期望位置 (x y z)，单位：米
       可选：跟随姿态 (roll pitch yaw)，单位：度
-输出: 求得的 6 个关节角度（度）
+输出: 求得的关节角度（度）
       + 收敛信息
+
+配置: config/rebotarm.yaml
 """
 
 import sys
@@ -17,6 +19,7 @@ import pinocchio as pin
 sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
 
 from reBotArm_control_py.kinematics import (
+    get_joint_count,
     load_robot_model,
     compute_ik,
     get_joint_names,
@@ -46,7 +49,7 @@ def print_welcome(model, joint_names) -> None:
     print("> ", end="", flush=True)
 
 
-def print_result(result, target_pos, target_rot, joint_names) -> None:
+def print_result(result, target_pos, target_rot, joint_names, n_joints: int) -> None:
     print()
     print("=" * 52)
     print("  结果")
@@ -60,8 +63,8 @@ def print_result(result, target_pos, target_rot, joint_names) -> None:
     print(f"  迭代次数 : {result.iterations}")
     print(f"  位置误差  : {result.error:.2e} m")
     print()
-    print(f"  关节角度 (度):")
-    for name, deg, rad in zip(joint_names, np.degrees(result.q), result.q):
+    print(f"  关节角度 (度) [前 {n_joints} 个控制关节]:")
+    for name, deg, rad in zip(joint_names[:n_joints], np.degrees(result.q[:n_joints]), result.q[:n_joints]):
         print(f"    {name:10s} = {deg:+8.4f} deg  ({rad:+.4f} rad)")
 
 
@@ -91,6 +94,7 @@ def parse_pose_input(line: str) -> tuple:
 def main() -> None:
     model = load_robot_model()
     joint_names = get_joint_names(model)
+    n_joints = get_joint_count()
 
     print_welcome(model, joint_names)
 
@@ -103,11 +107,9 @@ def main() -> None:
     target_pos, target_rot = parse_pose_input(line)
 
     q_init = np.zeros(model.nq)
-    
-    # 创建IK参数对象来传递max_iter和damping
+
     ik_params = IKParams(max_iter=2000, damping=0.01)
-    
-    # 计算IK
+
     result = compute_ik(
         q_init=q_init,
         target_pos=target_pos,
@@ -115,7 +117,7 @@ def main() -> None:
         params=ik_params,
     )
 
-    print_result(result, target_pos, target_rot, joint_names)
+    print_result(result, target_pos, target_rot, joint_names, n_joints)
 
 
 if __name__ == "__main__":

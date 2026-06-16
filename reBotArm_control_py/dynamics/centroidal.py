@@ -23,6 +23,7 @@ import pinocchio as pin
 
 from .robot_model import load_dynamics_model, create_data
 from .inertia import _check_q_shape, _check_v_shape
+from ..kinematics.robot_model import pad_q_for_model
 
 
 # --------------------------------------------------------------------------- #
@@ -53,6 +54,8 @@ def compute_center_of_mass(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
 
     _check_q_shape(model, q, "compute_center_of_mass")
 
@@ -91,6 +94,8 @@ def compute_com_velocity(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
     if v is None:
         v = np.zeros(model.nv)
 
@@ -135,6 +140,8 @@ def compute_centroidal_momentum(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
     if v is None:
         v = np.zeros(model.nv)
 
@@ -183,6 +190,8 @@ def compute_centroidal_matrix(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
     if v is None:
         v = np.zeros(model.nv)
 

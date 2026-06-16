@@ -24,7 +24,7 @@ from pinocchio.visualize import MeshcatVisualizer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from reBotArm_control_py.kinematics import _get_default_urdf_path
+from reBotArm_control_py.kinematics import _resolve_urdf
 
 
 class Visualizer:
@@ -35,11 +35,22 @@ class Visualizer:
         - 绘制末端参考路径（灰色）和已走路径（绿色）
         - IK 目标位姿可视化（三色轴 + 球体）
         - 轨迹动画播放
+
+    配置: config/rebotarm.yaml
     """
 
-    def __init__(self, open_browser: bool = True):
-        urdf_path = _get_default_urdf_path()
-        pkg_dir = str(Path(urdf_path).parents[2])
+    def __init__(
+        self,
+        open_browser: bool = True,
+        urdf_path: str | None = None,
+    ):
+        """初始化可视化器。
+
+        Args:
+            open_browser: 是否在终端打印 MeshCat 访问地址。
+            urdf_path:    URDF 文件路径，留空则从 hardware_yaml 指向的硬件配置文件中读取。
+        """
+        urdf_path, pkg_dir = _resolve_urdf(urdf_path)
 
         self._model = pin.buildModelFromUrdf(urdf_path)
         self._data = self._model.createData()

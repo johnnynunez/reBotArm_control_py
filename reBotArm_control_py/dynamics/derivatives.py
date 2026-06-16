@@ -22,6 +22,7 @@ import pinocchio as pin
 
 from .robot_model import load_dynamics_model, create_data
 from .inertia import _check_q_shape, _check_v_shape
+from ..kinematics.robot_model import pad_q_for_model
 
 
 # --------------------------------------------------------------------------- #
@@ -52,6 +53,8 @@ def compute_mass_matrix_derivatives(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
 
     _check_q_shape(model, q, "compute_mass_matrix_derivatives")
 
@@ -97,6 +100,8 @@ def compute_rnea_derivatives(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
     if v is None:
         v = np.zeros(model.nv)
     if a is None:
@@ -144,6 +149,8 @@ def compute_coriolis_derivatives(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
     if v is None:
         v = np.zeros(model.nv)
 
@@ -189,6 +196,8 @@ def compute_generalized_gravity_derivatives(
         data = create_data(model)
     if q is None:
         q = pin.neutral(model)
+    else:
+        q = pad_q_for_model(model, q)
 
     _check_q_shape(model, q, "compute_generalized_gravity_derivatives")
 

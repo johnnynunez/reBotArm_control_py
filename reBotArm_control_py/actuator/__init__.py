@@ -1,35 +1,30 @@
-"""actuator 模块 - 直接基于 motorbridge SDK 的机械臂控制。
+"""actuator 模块 — JointGroup 架构（分组控制，同步发送）。
 
-使用示例::
+所有参数均在 config/rebotarm.yaml 中定义，hardware_yaml 字段指定硬件配置文件。
 
-    from reBotArm_control_py.actuator import RobotArm
+示例::
 
-    arm = RobotArm("config/arm.yaml")
-    arm.connect()
-    arm.disable()
-    arm.set_zero()     
-    arm.enable()
-    arm.mode_mit()
-    arm.mit(positions=np.array([...]), kp=np.array([...]), kd=np.array([...]))
+    rebotarm = RebotArm()   # 自动从 rebotarm.yaml 读取 hardware_yaml
+    rebotarm.connect()
+    rebotarm.arm.enable()
+    rebotarm.gripper.enable()
+    rebotarm.arm.mode_pos_vel()       # arm 组切换模式
+    rebotarm.gripper.mode_mit()       # gripper 组切换模式
 
-    arm.mode_pos_vel()
-    arm.pos_vel(positions=np.array([...]))
+    def loop(r, dt):
+        r.arm.send_pos_vel(joint_pos)     # arm 组发送
+        r.gripper.send_mit(gripper_pos)   # gripper 组发送
 
-    arm.mode_vel()
-    arm.set_vel(velocities=np.array([...]))
-
-    arm.stop_control_loop()
-    arm.disconnect()
+    rebotarm.start_control_loop(loop)
+    rebotarm.stop_control_loop()
+    rebotarm.disconnect()
 """
 
-from .arm import RobotArm, JointCfg, load_cfg
-from .gripper import Gripper, GripperCfg, load_cfg as load_gripper_cfg
+from .rebotarm import RebotArm, JointGroup, JointCfg, load_cfg
 
 __all__ = [
-    "RobotArm",
+    "RebotArm",
+    "JointGroup",
     "JointCfg",
     "load_cfg",
-    "Gripper",
-    "GripperCfg",
-    "load_gripper_cfg",
 ]
