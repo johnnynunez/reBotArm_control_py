@@ -2,8 +2,14 @@
 # vendor: damiao  |  transport: dm-serial
 # 关节分组: arm (前6关节) + gripper (夹爪)
 # 每组独立控制模式，独立发送
-
 # 运动学配置（URDF 路径、末端执行器帧）
+
+# reBotArm DM config (Damiao motors + serial bridge)
+# vendor: damiao  |  transport: dm-serial
+# Joint groups: arm (first 6 joints) + gripper
+# Each group has its own control mode and is sent independently
+# Kinematics config (URDF path, end-effector frame)
+
 urdf_path: "urdf/reBot-DevArm_fixend_description/urdf/reBot-DevArm_fixend.urdf"
 end_effector_frame: "end_link"
 

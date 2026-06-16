@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 """机械臂零点校准 + 随动模式（MIT 零刚度）。
-
 使能后，机械臂处于随动状态（MIT，kp=0, kd=0），可手动自由移动，
 同时实时打印各关节角度（度）。
 
-用法::
+Robot arm zero calibration + free-drive mode (MIT zero stiffness).
+After enabling, the arm is in free-drive state (MIT, kp=0, kd=0) and can be
+manually moved freely while real-time joint angles (degrees) are printed.
+
+用法 / Usage::
 
     python example/2_zero_and_read.py
       自动从 config/rebotarm.yaml 的 hardware_yaml 读取配置
+      Auto-load config from config/rebotarm.yaml's hardware_yaml field
 
     python example/2_zero_and_read.py rebotarm_dm.yaml
       强制指定硬件配置文件
+      Force a specific hardware config file
 """
 import time
 import sys
@@ -24,16 +29,17 @@ from reBotArm_control_py.actuator import RebotArm
 
 _hw_yaml = sys.argv[1] if len(sys.argv) > 1 else None
 rebotarm = RebotArm(_hw_yaml)
-print(f"[{rebotarm.hardware_yaml}] 使用配置: {rebotarm.hardware_yaml}")
+print(f"[{rebotarm.hardware_yaml}] 使用配置 / Using config: {rebotarm.hardware_yaml}")
 rebotarm.connect()
-print("--- 连接成功 ---")
+print("--- 连接成功 / Connection OK ---")
 rebotarm.set_zero()
-print("--- 零点已设置 ---\n")
+print("--- 零点已设置 / Zero set ---\n")
 
 n_arm = rebotarm.arm.num_joints
 n_total = rebotarm.num_joints
 
 # 随动模式：MIT 零刚度，机械臂可自由手动移动
+# Free-drive mode: MIT zero stiffness, arm can be freely moved by hand
 _zeros_arm = np.zeros(n_arm)
 
 
@@ -54,7 +60,7 @@ def fresh_controller(r: RebotArm, dt: float) -> None:
     )
 
 
-print(f"--- 随动模式，实时角度（deg）Ctrl+C 退出 ---\n")
+print(f"--- 随动模式 / Free-drive mode，实时角度（deg）Ctrl+C 退出/exit ---\n")
 rebotarm.arm.mode_mit()
 rebotarm.gripper.mode_mit()
 rebotarm.enable_all()

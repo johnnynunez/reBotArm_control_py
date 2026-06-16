@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """reBotArm MIT 控制（全部关节，测试模式）。
 
-用法:
+MIT control for all joints (test mode).
+
+用法 / Usage:
     python example/3_mit_control.py
 
-输入: 全部关节角度（度），空格分隔
-示例:
-    0 0 0 0 0 0         # 仅 arm
-    0 0 0 0 0 0 2.0     # arm + 夹爪（如果配置了 gripper）
+输入 / Input: 全部关节角度（度），空格分隔 / All joint angles (degrees), space-separated
+示例 / Examples:
+    0 0 0 0 0 0         # 仅 arm / arm only
+    0 0 0 0 0 0 2.0     # arm + 夹爪（如果配置了 gripper）/ arm + gripper (if configured)
 
 所有关节统一 MIT 模式，每周期同步发送。
+All joints use MIT mode, synchronized sending every cycle.
 """
 from pathlib import Path
 import sys
@@ -39,9 +42,9 @@ def mit_controller(r: RebotArm, dt: float) -> None:
 
 rebotarm.start_control_loop(mit_controller)
 
-print(f"关节数: {n_total} (arm={n_arm}, gripper={n_gripper}) | {rebotarm.rate}Hz")
-gripper_hint = "（夹爪将忽略）" if n_gripper == 0 else ""
-print(f"命令: {n_total}个角度(度)  q退出  state查看状态 {gripper_hint}\n")
+print(f"关节数 / Joint count: {n_total} (arm={n_arm}, gripper={n_gripper}) | {rebotarm.rate}Hz")
+gripper_hint = "（夹爪将忽略 / gripper will be ignored）" if n_gripper == 0 else ""
+print(f"命令 / Command: {n_total}个角度(度)  q退出/exit  state查看状态/state {gripper_hint}\n")
 
 while True:
     try:
@@ -61,7 +64,7 @@ while True:
 
     tokens = line.split()
     if len(tokens) < n_total:
-        print(f"需要 {n_total} 个值（{n_arm} 关节 + {n_gripper} 夹爪）")
+        print(f"需要 / Need {n_total} 个值（{n_arm} 关节 + {n_gripper} 夹爪）/ values ({n_arm} joints + {n_gripper} gripper)")
         continue
 
     pos_deg = [float(x) for x in tokens[:n_total]]

@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """reBotArm 逆运动学数据测试
 
-用法:
+Inverse kinematics data test.
+
+用法 / Usage:
   python example/6_ik_test.py
 
-输入: 末端期望位置 (x y z)，单位：米
-      可选：跟随姿态 (roll pitch yaw)，单位：度
-输出: 求得的关节角度（度）
-      + 收敛信息
+输入 / Input: 末端期望位置 (x y z)，单位：米 / End-effector desired position (x y z) in meters
+             可选 / Optional: 跟随姿态 (roll pitch yaw)，单位：度 / Follow orientation (roll pitch yaw) in degrees
+输出 / Output: 求得的关节角度（度）/ Computed joint angles in degrees
+               + 收敛信息 / Convergence info
 
-配置: config/rebotarm.yaml
+配置 / Config: config/rebotarm.yaml
 """
 
 import sys
@@ -33,18 +35,18 @@ from reBotArm_control_py.kinematics.inverse_kinematics import IKParams
 
 def print_welcome(model, joint_names) -> None:
     print("=" * 52)
-    print("  reBotArm 逆运动学测试")
+    print("  reBotArm 逆运动学测试 / Inverse Kinematics Test")
     print("=" * 52)
-    print(f"  机器人: {model.name}")
-    print(f"  关节  : {joint_names}")
+    print(f"  机器人 / Robot: {model.name}")
+    print(f"  关节   / Joints: {joint_names}")
     print()
-    print("  输入末端期望位姿:")
-    print("    <x> <y> <z>                       (仅位置，米)")
-    print("    <x> <y> <z> <roll> <pitch> <yaw>    (位置+姿态，度)")
+    print("  输入末端期望位姿 / Enter desired end-effector pose:")
+    print("    <x> <y> <z>                       (仅位置，米 / position only, meters)")
+    print("    <x> <y> <z> <roll> <pitch> <yaw>    (位置+姿态，度 / position+orientation, degrees)")
     print()
-    print("  示例:")
-    print("    0.25 0.0 0.15                      (仅位置)")
-    print("    0.25 0.0 0.15 0 0 0                (位置+姿态)")
+    print("  示例 / Examples:")
+    print("    0.25 0.0 0.15                      (仅位置 / position only)")
+    print("    0.25 0.0 0.15 0 0 0                (位置+姿态 / position+orientation)")
     print("-" * 52)
     print("> ", end="", flush=True)
 
@@ -52,18 +54,18 @@ def print_welcome(model, joint_names) -> None:
 def print_result(result, target_pos, target_rot, joint_names, n_joints: int) -> None:
     print()
     print("=" * 52)
-    print("  结果")
+    print("  结果 / Result")
     print("=" * 52)
-    print(f"  目标末端位置   : [{target_pos[0]:+.4f}, {target_pos[1]:+.4f}, {target_pos[2]:+.4f}] m")
+    print(f"  目标末端位置 / Target position   : [{target_pos[0]:+.4f}, {target_pos[1]:+.4f}, {target_pos[2]:+.4f}] m")
     if target_rot is not None:
         euler_in = np.degrees(pin.rpy.matrixToRpy(target_rot))
-        print(f"  目标末端姿态   : [{euler_in[0]:+.2f}, {euler_in[1]:+.2f}, {euler_in[2]:+.2f}] deg")
+        print(f"  目标末端姿态 / Target orientation: [{euler_in[0]:+.2f}, {euler_in[1]:+.2f}, {euler_in[2]:+.2f}] deg")
     print()
-    print(f"  收敛状态  : {'是' if result.success else '否'}")
-    print(f"  迭代次数 : {result.iterations}")
-    print(f"  位置误差  : {result.error:.2e} m")
+    print(f"  收敛 / Converged  : {'是 / Yes' if result.success else '否 / No'}")
+    print(f"  迭代次数 / Iterations: {result.iterations}")
+    print(f"  位置误差 / Position error: {result.error:.2e} m")
     print()
-    print(f"  关节角度 (度) [前 {n_joints} 个控制关节]:")
+    print(f"  关节角度 (度) [前 {n_joints} 个控制关节] / Joint angles (deg) [first {n_joints} control joints]:")
     for name, deg, rad in zip(joint_names[:n_joints], np.degrees(result.q[:n_joints]), result.q[:n_joints]):
         print(f"    {name:10s} = {deg:+8.4f} deg  ({rad:+.4f} rad)")
 
@@ -71,12 +73,12 @@ def print_result(result, target_pos, target_rot, joint_names, n_joints: int) -> 
 def parse_pose_input(line: str) -> tuple:
     tokens = line.split()
     if len(tokens) not in (3, 6):
-        print(f"错误: 需要 3 个值（仅位置）或 6 个值（位置+姿态），输入了 {len(tokens)} 个")
+        print(f"错误 / Error: 需要 / need 3 个值 / values（仅位置 / pos only）或 6 个值 / values（位置+姿态 / pos+ori），输入了 / got {len(tokens)} 个 / values")
         sys.exit(1)
     try:
         vals = [float(x) for x in tokens]
     except ValueError as e:
-        print(f"错误: 无法解析数字 — {e}")
+        print(f"错误 / Error: 无法解析数字 / Cannot parse number — {e}")
         sys.exit(1)
 
     target_pos = np.array(vals[:3])
@@ -101,7 +103,7 @@ def main() -> None:
     try:
         line = input().strip()
     except EOFError:
-        print("无输入，退出。")
+        print("无输入，退出。/ No input, exit.")
         return
 
     target_pos, target_rot = parse_pose_input(line)

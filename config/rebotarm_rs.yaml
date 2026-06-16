@@ -7,6 +7,18 @@
 #   - arm.gripper 在无配置时自动替换为 NoOpGroup，所有操作均为空操作
 
 # 运动学配置（URDF 路径、末端执行器帧）
+
+
+# reBotArm RS config (RobStride motors + CAN bus)
+# vendor: robstride  |  transport: CAN
+# Joint groups: arm (first 6 joints) + gripper (optional)
+# Gripper notes:
+#   - Using motor gripper: uncomment gripper group, arm group lists 6 joints
+#   - Using other actuator (suction cup, etc.): comment out gripper group
+#   - arm.gripper auto-replaces with NoOpGroup when unconfigured; all operations are no-op
+
+# Kinematics config (URDF path, end-effector frame)
+
 urdf_path: "urdf/00-arm-rs_asm-v3/urdf/00-arm-rs_asm-v3.urdf"
 end_effector_frame: "gripper_end"
 
