@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""reBotArm 逆运动学数据测试
+"""
+reBotArm 逆运动学数据测试。
+输入: 末端期望位置 (x y z)，单位：米
+     可选: 跟随姿态 (roll pitch yaw)，单位：度
+输出: 求得的关节角度（度）
+      + 收敛信息
 
 Inverse kinematics data test.
+Input: End-effector desired position (x y z) in meters
+       Optional: Follow orientation (roll pitch yaw) in degrees
+Output: Computed joint angles in degrees
+        + Convergence info
 
 用法 / Usage:
-  python example/6_ik_test.py
-
-输入 / Input: 末端期望位置 (x y z)，单位：米 / End-effector desired position (x y z) in meters
-             可选 / Optional: 跟随姿态 (roll pitch yaw)，单位：度 / Follow orientation (roll pitch yaw) in degrees
-输出 / Output: 求得的关节角度（度）/ Computed joint angles in degrees
-               + 收敛信息 / Convergence info
+    python example/6_ik_test.py
 
 配置 / Config: config/rebotarm.yaml
 """
@@ -73,12 +77,14 @@ def print_result(result, target_pos, target_rot, joint_names, n_joints: int) -> 
 def parse_pose_input(line: str) -> tuple:
     tokens = line.split()
     if len(tokens) not in (3, 6):
-        print(f"错误 / Error: 需要 / need 3 个值 / values（仅位置 / pos only）或 6 个值 / values（位置+姿态 / pos+ori），输入了 / got {len(tokens)} 个 / values")
+        print(f"错误: 需要 3 个值（仅位置）或 6 个值（位置+姿态），输入了 {len(tokens)} 个")
+        print(f"Error: need 3 values (pos only) or 6 values (pos+ori), got {len(tokens)}")
         sys.exit(1)
     try:
         vals = [float(x) for x in tokens]
     except ValueError as e:
-        print(f"错误 / Error: 无法解析数字 / Cannot parse number — {e}")
+        print(f"错误: 无法解析数字 — {e}")
+        print(f"Error: cannot parse number — {e}")
         sys.exit(1)
 
     target_pos = np.array(vals[:3])

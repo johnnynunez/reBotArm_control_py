@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""RebotArmEndPose 交互控制示例（轨迹规划模式）。
+"""
+RebotArmEndPose 交互控制示例（轨迹规划模式）。
+输入: x y z [roll pitch yaw] [duration]  目标末端位置（米 / 弧度 / 秒）
+      g <pos>                            设置夹爪目标位置
 
-用法:
+RebotArmEndPose interactive control example (trajectory planning mode).
+Input: x y z [roll pitch yaw] [duration]  target end-effector pose (meters / radians / seconds)
+       g <pos>                            set gripper target position
+
+用法 / Usage:
     python example/8_arm_traj_control.py
 
-输入:
-    x y z [roll pitch yaw] [duration]   目标末端位置（米 / 弧度 / 秒）
-    g <pos>                            设置夹爪目标位置
-    q / quit / exit                     退出
-    state                               当前状态
-    end_state                           末端位姿
+退出 / Exit: q / quit / exit
+状态 / State: state, end_state
 """
 
 import sys
@@ -40,9 +43,9 @@ def main() -> None:
 
         if line.lower() == "state":
             q, _, _ = rebotarm.get_state()
-            print(f"  机械臂 (rad): {[f'{v:+.3f}' for v in q[:rebotarm.arm.num_joints]]}")
+            print(f"  机械臂 / Arm (rad): {[f'{v:+.3f}' for v in q[:rebotarm.arm.num_joints]]}")
             if rebotarm.has_gripper:
-                print(f"  夹爪 (rad): {q[rebotarm.arm.num_joints]:+.3f}")
+                print(f"  夹爪 / Gripper (rad): {q[rebotarm.arm.num_joints]:+.3f}")
             continue
 
         if line.lower() == "end_state":
@@ -61,15 +64,15 @@ def main() -> None:
             try:
                 pos = float(parts[1])
                 ctrl.set_gripper_target(pos)
-                print(f"  夹爪 -> {pos:.3f} rad")
+                print(f"  夹爪 / Gripper -> {pos:.3f} rad")
             except ValueError:
-                print("  用法: g <pos>")
+            print("  用法 / Usage: g <pos>")
             continue
 
         try:
             vals = [float(v) for v in parts]
         except ValueError:
-            print("  格式: x y z [roll pitch yaw] [duration]")
+            print("  格式 / Format: x y z [roll pitch yaw] [duration]")
             continue
 
         x, y, z = vals[0], vals[1], vals[2]
@@ -84,10 +87,10 @@ def main() -> None:
             duration=duration,
         )
         print(f"  -> ({x:+.3f}, {y:+.3f}, {z:+.3f})  "
-              f"T={duration:.1f}s  {'ok' if ok else 'fail'}")
+              f"T={duration:.1f}s  {'ok' if ok else 'failed'}")
 
     ctrl.end()
-    print("\n完成。")
+    print("\n完成 / Done.")
 
 
 if __name__ == "__main__":
