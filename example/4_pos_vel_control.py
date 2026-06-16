@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""reBotArm POS_VEL 控制（全部关节，测试模式）。
+"""
+reBotArm POS_VEL 控制（全部关节，测试模式）。
+输入: 全部关节角度（度），空格分隔
+所有关节统一 POS_VEL 模式，每周期同步发送。
 
 POS_VEL control for all joints (test mode).
+Input: All joint angles (degrees), space-separated
+All joints use POS_VEL mode, synchronized sending every cycle.
 
 用法 / Usage:
     python example/4_pos_vel_control.py
 
-输入 / Input: 全部关节角度（度），空格分隔 / All joint angles (degrees), space-separated
 示例 / Examples:
     0 0 0 0 0 0         # 仅 arm / arm only
     0 0 0 0 0 0 2.0     # arm + 夹爪（如果配置了 gripper）/ arm + gripper (if configured)
-
-所有关节统一 POS_VEL 模式，每周期同步发送。
-All joints use POS_VEL mode, synchronized sending every cycle.
 """
 from pathlib import Path
 import sys
@@ -64,7 +65,8 @@ while True:
 
     tokens = line.split()
     if len(tokens) < n_total:
-        print(f"需要 / Need {n_total} 个值（{n_arm} 关节 + {n_gripper} 夹爪）/ values ({n_arm} joints + {n_gripper} gripper)")
+        print(f"需要 {n_total} 个值（{n_arm} 关节 + {n_gripper} 夹爪）")
+        print(f"Need {n_total} values ({n_arm} joints + {n_gripper} gripper)")
         continue
 
     pos_deg = [float(x) for x in tokens[:n_total]]

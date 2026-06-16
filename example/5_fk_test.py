@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""reBotArm 正运动学数据测试
+"""
+reBotArm 正运动学数据测试。
+输入: model.nq 个关节角度，单位：度，空格分隔
+输出: 末端位置 (x, y, z)，单位：米
+      + 旋转矩阵 (3x3)
+      + 欧拉角 (roll, pitch, yaw)，单位：度
 
 Forward kinematics data test.
+Input: model.nq joint angles in degrees, space-separated
+Output: End-effector position (x, y, z) in meters
+        + Rotation matrix (3x3)
+        + Euler angles (roll, pitch, yaw) in degrees
 
 用法 / Usage:
-  python example/5_fk_test.py
-
-输入 / Input: model.nq 个关节角度，单位：度，空格分隔
-           model.nq joint angles in degrees, space-separated
-输出 / Output: 末端位置 (x, y, z)，单位：米
-              End-effector position (x, y, z) in meters
-              + 旋转矩阵 (3x3) / Rotation matrix (3x3)
-              + 欧拉角 (roll, pitch, yaw)，单位：度 / Euler angles (roll, pitch, yaw) in degrees
+    python example/5_fk_test.py
 
 配置 / Config: config/rebotarm.yaml
 """
@@ -69,12 +71,14 @@ def print_result(q_deg, position, rotation, euler_deg) -> None:
 def parse_joint_input(line: str, n: int) -> np.ndarray:
     tokens = line.split()
     if len(tokens) != n:
-        print(f"错误 / Error: 需要 / need {n} 个值 / values，输入了 / got {len(tokens)} 个 / values")
+        print(f"错误: 需要 {n} 个值，输入了 {len(tokens)} 个")
+        print(f"Error: need {n} values, got {len(tokens)}")
         sys.exit(1)
     try:
         q_deg = [float(x) for x in tokens]
     except ValueError as e:
-        print(f"错误 / Error: 无法解析数字 / Cannot parse number — {e}")
+        print(f"错误: 无法解析数字 — {e}")
+        print(f"Error: cannot parse number — {e}")
         sys.exit(1)
     return np.radians(q_deg)
 

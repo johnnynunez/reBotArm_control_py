@@ -29,11 +29,14 @@ from reBotArm_control_py.actuator import RebotArm
 
 _hw_yaml = sys.argv[1] if len(sys.argv) > 1 else None
 rebotarm = RebotArm(_hw_yaml)
-print(f"[{rebotarm.hardware_yaml}] 使用配置 / Using config: {rebotarm.hardware_yaml}")
+print(f"[{rebotarm.hardware_yaml}] 使用配置:")
+print(f"[{rebotarm.hardware_yaml}] Using config: {rebotarm.hardware_yaml}")
 rebotarm.connect()
-print("--- 连接成功 / Connection OK ---")
+print("--- 连接成功 ---")
+print("--- Connection OK ---\n")
 rebotarm.set_zero()
-print("--- 零点已设置 / Zero set ---\n")
+print("--- 零点已设置 ---")
+print("--- Zero set ---\n")
 
 n_arm = rebotarm.arm.num_joints
 n_total = rebotarm.num_joints
@@ -60,7 +63,10 @@ def fresh_controller(r: RebotArm, dt: float) -> None:
     )
 
 
-print(f"--- 随动模式 / Free-drive mode，实时角度（deg）Ctrl+C 退出/exit ---\n")
+print("--- 随动模式 ---")
+print("实时角度（度）。按 Ctrl+C 退出。\n")
+print("--- Free-drive mode ---")
+print("Realtime angles (deg). Press Ctrl+C to exit.\n")
 rebotarm.arm.mode_mit()
 rebotarm.gripper.mode_mit()
 rebotarm.enable_all()
