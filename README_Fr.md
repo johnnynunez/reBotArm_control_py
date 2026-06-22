@@ -61,7 +61,7 @@ Sous Windows, `motorbridge` utilise PCAN-Basic pour communiquer avec les adaptat
 
 | Élément | Action |
 |---|---|
-| **Pilote** | Téléchargez PCAN-Driver depuis https://www.peak-system.com/quick-drivers (inclut `PCANBasic.dll` + PCAN-View) |
+| **Pilote** | Téléchargez PCAN-Driver depuis https://www.peak-system.com/fileadmin/media/files/PEAK-System_Driver-Setup.zip (inclut `PCANBasic.dll` + PCAN-View) |
 | **Vérifier DLL** | `Test-Path C:\Windows\System32\PCANBasic.dll` → `True` |
 | **Nommage des canaux** | `can0` / `can1` → `PCAN_USBBUS1` / `PCAN_USBBUS2`; `can0@1000000` = 1 Mbps |
 | **Baudrates par défaut** | RS06 = 1 Mbps ; RS00 / Damiao = 500 kbps |
