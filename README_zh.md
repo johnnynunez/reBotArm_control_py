@@ -53,7 +53,7 @@ Windows 下 `motorbridge` 通过 PCAN-Basic 操作 PCAN-USB。
 
 | 项 | 做法 |
 |---|---|
-| **装驱动** | [https://www.peak-system.com/quick-drivers](https://www.peak-system.com/fileadmin/media/files/PEAK-System_Driver-Setup.zip) 下载 PCAN-Driver（自带 `PCANBasic.dll` + PCAN-View） |
+| **装驱动** | https://www.peak-system.com/fileadmin/media/files/PEAK-System_Driver-Setup.zip 下载 PCAN-Driver（自带 `PCANBasic.dll` + PCAN-View） |
 | **验证 DLL** | `Test-Path C:\Windows\System32\PCANBasic.dll` 应返回 `True` |
 | **通道名** | `can0` / `can1` 自动映射到 `PCAN_USBBUS1` / `PCAN_USBBUS2`；`can0@1000000` 表示 1 Mbps |
 | **电机默认波特率** | RS06 = 1 Mbps；RS00 / 达妙 = 500 kbps |
