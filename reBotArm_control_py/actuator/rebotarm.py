@@ -48,7 +48,7 @@ def _resolve_hw_cfg_path(hw_yaml: str | None = None) -> Path:
     if hw_yaml is None:
         if not _GLOBAL_CFG.exists():
             raise FileNotFoundError(f"{_GLOBAL_CFG} not found")
-        data = yaml.safe_load(_GLOBAL_CFG.read_text())
+        data = yaml.safe_load(_GLOBAL_CFG.read_text(encoding="utf-8"))
         hw_yaml = data.get("hardware_yaml") if data else None
         if not hw_yaml:
             raise ValueError("hardware_yaml not set in rebotarm.yaml")
@@ -85,7 +85,7 @@ class JointCfg:
 def load_cfg(hw_yaml: str | None = None) -> dict:
     hw_path = _resolve_hw_cfg_path(hw_yaml)
 
-    with open(hw_path, "r") as f:
+    with open(hw_path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     joints = []

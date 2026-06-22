@@ -1,119 +1,100 @@
 # reBot Arm B601-DM の Pinocchio と MeshCat 入門ガイド
 
 <p align="center">
-    <a href="./LICENSE">
-        <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT">
-    </a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
     <img src="https://img.shields.io/badge/Python-3.10+-blue.svg" alt="Python Version">
-    <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20Ubuntu-orange.svg" alt="Platform">
+    <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20Windows-orange.svg" alt="Platform">
     <img src="https://img.shields.io/badge/Framework-Pinocchio-yellow.svg" alt="Pinocchio">
 </p>
 
-<p align="center">
-  <strong>6 自由度ロボットアーム · 多モーター対応 · 運動学ソルバー · 軌道計画 · 完全オープンソース</strong>
-</p>
+<p align="center"><strong>6自由度ロボットアーム · マルチモーター · 運動学 · 軌道計画 · MITライセンス</strong></p>
 
 <p align="center">
-  <strong>
     <a href="./README_zh.md">简体中文</a> &nbsp;|&nbsp;
     <a href="./README.md">English</a> &nbsp;|&nbsp;
     <a href="./README_JP.md">日本語</a>&nbsp;|&nbsp;
     <a href="./README_Fr.md">français</a>&nbsp;|&nbsp;
     <a href="./README_es.md">Español</a>
-  </strong>
 </p>
 
 ---
 
 ## 📖 プロジェクト概要
 
-**reBotArm Control** は、reBot Arm B601 ロボットアーム向けの Python 制御ライブラリで、低レベルのモーター制御から高レベルの運動学計算までの完全なソリューションを提供します。
+**reBotArm Control**: reBot Arm B601 シリーズ向け Python 制御ライブラリ — モータ制御、运动学、軌道計画。
 
-### ✨ 主な機能
-
-- 🦾 **双型号サポート** — B601-DM（達妙モーター）と B601-RS（霊足モーター）
-- 🧮 **運動学ソルバー** — Pinocchio ベースの順/逆運動学計算
-- 🛤️ **軌道計画** — SE(3) 測地線軌道 + CLIK 追従
-- 🔧 **柔軟な設定** — YAML 設定ファイルでハードウェアの迅速な適応
+- 🦾 デュアルモデル: B601-DM（達妙）/ B601-RS（RobStride）
+- 🧮 運動学: Pinocchio による FK/IK
+- 🛤️ 軌道: SE(3) 測地線 + CLIK 追従
+- 🔧 設定: YAML ベース
 
 ---
 
-## ⚙️ クイックスタート
+## ⚙️ インストール（Linux / Windows 共通）
 
-### 動作環境
+### 1. Anaconda / Miniconda をインストール
+[Miniconda](https://docs.conda.io/en/latest/miniconda.html) をダウンロード。Windows ユーザーは **Anaconda PowerShell Prompt** を管理者として開くこと（通常の PowerShell では conda コマンドが認識されない）。
 
-| 項目 | 要件 |
-|------|------|
-| **Python** | 3.10+ |
-| **オペレーティングシステム** | Ubuntu 22.04+ |
-| **通信インターフェース** | USB2CAN シリアルブリッジ または CAN インターフェース |
-
-### インストール手順
-
-#### ステップ 1. uv のインストール（未インストールの場合）
-
+### 2. 環境作成＋依存関係インストール
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-#### ステップ 2. 環境の同期（すべての依存関係をインストール）
-
-```bash
+conda create -n robotarm python=3.10 -y
+conda activate robotarm
 git clone https://github.com/vectorBH6/reBotArm_control_py.git
 cd reBotArm_control_py
-uv sync
+pip install -e .
+pip install motorbridge
 ```
 
-:::tip
-`uv sync` は、仮想環境を自動的に作成し（存在しない場合）、`pyproject.toml` と `uv.lock` に従ってすべての依存関係をインストールします。
-:::
+> プロジェクトの `.venv/` は使用禁止。必ず最初に `conda activate robotarm` を実行すること。
+
+### 3. 動作確認
+```bash
+motorbridge-cli scan --vendor robstride --channel can0@1000000 --start-id 1 --end-id 5
+```
+5 つのモータが検出されれば OK（ハードウェアの数に合わせて調整）。
+
+---
+
+## 🪟 Windows: PEAK PCAN-USB
+
+Windows では `motorbridge` が PCAN-Basic を使って PCAN-USB アダプタと通信する。
+
+| 項目 | 手順 |
+|---|---|
+| **ドライバ** | https://www.peak-system.com/quick-drivers から PCAN-Driver をダウンロード（`PCANBasic.dll` + PCAN-View が含まれる） |
+| **DLL 確認** | `Test-Path C:\Windows\System32\PCANBasic.dll` → `True` |
+| **チャネル命名** | `can0` / `can1` → `PCAN_USBBUS1` / `PCAN_USBBUS2`; `can0@1000000` = 1 Mbps |
+| **デフォルトbaudrate** | RS06 = 1 Mbps; RS00 / 達妙 = 500 kbps |
+| **設定変更** | `config/rebotarm_rs.yaml` 内の `channel: can0@1000000` を設定（`rate` は制御ループの Hz で、CAN baudrate ではない） |
+| **YAML エンコーディング** | Windows 標準は GBK で、中国語コメント付き YAML を開くとエラーになる。`rebotarm.py` はすでに `encoding="utf-8"` を使用—no manual fix needed. |
+| **権限** | `chmod` 不要; Defender / 360 が初回ブロックしたら許可 |
+| **VM / WSL2** | PCAN-USB は Windows ホストにパススルー必須。VM 内部からは使用不可 |
+
+### Windows トラブルシューティング
+| 症状 | 対処 |
+|---|---|
+| `ModuleNotFoundError: motorbridge` | Python 環境錯誤 → `conda activate robotarm` |
+| `UnicodeDecodeError: 'gbk'` | 上記 YAML エンコーディングの項目参照 |
+| scan 無応答 | baudrate を変更（`@500000` ↔ `@1000000`）；PCAN-View でフレーム確認 |
+| モータ応答なし | 120Ω 終端抵抗確認；`motor_id` と scan 結果の一致確認 |
 
 ---
 
 ## 🔌 ハードウェア設定
 
-### デフォルト：達妙 USB2CAN シリアルブリッジ
+| モータ | プラットフォーム | 通信方式 | チャネル / ポート | Baudrate |
+|---|---|---|---|---|
+| 達妙 | Linux | シリアルブリッジ | `/dev/ttyACM0` | 921600 |
+| 達妙 | Linux/Windows | SocketCAN / PCAN | `can0@500000` | 500 kbps |
+| RS00 | Linux/Windows | SocketCAN / PCAN | `can0@500000` | 500 kbps |
+| RS06 | Linux/Windows | SocketCAN / PCAN | `can0@1000000` | 1 Mbps |
 
-reBot Arm B601-DM はデフォルトで達妙 USB2CAN シリアルブリッジモジュールを使用します。
-
-**ハードウェア接続**：
-1. USB2CAN モジュールを USB ケーブルでコンピュータに接続
-2. システムが自動的に `/dev/ttyACM0` デバイスとして認識します
-
-**設定の確認**：
+Linux SocketCAN 起動:
 ```bash
-# デバイスの確認
-ls /dev/ttyACM0
-
-# モータースキャン
-motorbridge-cli scan --vendor damiao --transport dm-serial \
-    --serial-port /dev/ttyACM0 --serial-baud 921600
+sudo ip link set can0 up type can bitrate 1000000
 ```
 
-### オプション：標準 CAN インターフェース
-
-他の USB-CAN アダプター（CANable、PCAN など）を使用する場合：
-
-```bash
-# CAN インターフェースの起動
-sudo ip link set can0 up type can bitrate 500000
-
-# インターフェースの確認
-ip -details link show can0
-```
-
-### モーターブランドの設定
-
-| モーターブランド | 伝送方式 | 設定パラメータ | ボーレート |
-|-----------------|---------|---------------|-----------|
-| **達妙 (Damiao)** | シリアルブリッジ | `dm-serial` | 921600 |
-| **達妙 (Damiao)** | CAN インターフェース | `socketcan` | 500000 |
-| **RobStride** | CAN インターフェース | `socketcan` | 500000 |
-
-:::tip
-- 達妙モーターでシリアルブリッジを使用する場合、`--transport dm-serial` の設定が必要です
-- フィードバック ID ルール：`feedback_id = motor_id + 0x10`
-:::
+達妙シリアルブリッジは `--transport dm-serial` が必要。フィードバック ID 規則: `feedback_id = motor_id + 0x10`。
 
 ---
 
@@ -121,203 +102,41 @@ ip -details link show can0
 
 ```
 reBotArm_control_py/
-├── config/                     # 設定ファイル
-│   └── robot.yaml              # 関節パラメータ設定
-├── example/                    # サンプルプログラム
-│   ├── デバッグツール/
-│   │   ├── 1_damiao_text.py        # 単一モーターコンソール
-│   │   └── 2_zero_and_read.py      # ゼロキャリブレーション
-│   ├── 運動学テスト/
-│   │   ├── 5_fk_test.py            # 順運動学
-│   │   └── 6_ik_test.py            # 逆運動学
-│   ├── 実機制御/
-│   │   ├── 7_arm_ik_control.py     # IK リアルタイム制御
-│   │   ├── 8_arm_traj_control.py   # 軌道計画
-│   │   └── 9_gravity_compensation.py  # 重力補償
-│   └── sim/                    # シミュレーションツール
-├── reBotArm_control_py/        # コアライブラリ
-│   ├── actuator/               # アクチュエータモジュール
-│   ├── kinematics/             # 運動学モジュール
-│   ├── controllers/            # コントローラモジュール
-│   └── trajectory/             # 軌道計画モジュール
-├── urdf/                       # URDF モデル
-└── README.md
+├── config/                 # YAML 設定ファイル
+├── example/                # サンプル（0x01…9）
+├── reBotArm_control_py/    # コア (actuator / kinematics / controllers / trajectory)
+└── urdf/                   # URDF モデル
 ```
 
 ---
 
 ## 🎮 サンプルプログラム
 
-### デバッグツール
+必ず最初に `conda activate robotarm` を実行すること。
 
-#### 1️⃣ 単一モーターコンソール (`1_damiao_text.py`)
+| # | ファイル | 説明 |
+|---|---|---|
+| 0x01 | `0x01rs06_test.py` / `0x01damiao_test.py` | 単一モータコンソール (`ping` / `enable` / `mode mit` / `mit <pos>`) |
+| 2 | `2_zero_and_read.py` | ゼロキャリブレーション + リアルタイム角度 |
+| 3 | `3_mit_control.py` | MIT モード（位置＋速度＋トルク） |
+| 4 | `4_pos_vel_control.py` | POS_VEL モード |
+| 5 | `5_fk_test.py` | FK: 6 関節角度（度）→ エンドエフェクタ姿勢 |
+| 6 | `6_ik_test.py` | IK: エンドエフェクタ姿勢 → 関節角度 |
+| 7 | `7_arm_ik_control.py` | IK リアルタイム制御 (`x y z [r p y]`) |
+| 8 | `8_arm_traj_control.py` | SE(3) 測地線 + CLIK (`x y z [r p y] [duration]`) |
+| 9 | `9_gravity_compensation.py` | Pinocchio 重力補償 (`tau = g(q)`, kp=2 kd=1) |
 
-motorbridge SDK を直接使用した単一モーターテスト、3 つの制御モードをサポート。
-
-**使用方法**：
-```bash
-uv run python example/1_damiao_text.py
-```
-
-**インタラクティブコマンド**：
-| コマンド | 説明 |
-|---------|------|
-| `mit <pos_deg> [vel kp kd tau]` | MIT モード |
-| `posvel <pos_deg> [vlim]` | POS_VEL モード |
-| `vel <vel_rad_s>` | 速度モード |
-| `enable` / `disable` | 有効/無効 |
-| `set_zero` | ゼロ位置設定 |
-| `state` | 状態表示 |
-
----
-
-#### 2️⃣ ゼロキャリブレーションと角度監視 (`2_zero_and_read.py`)
-
-全関節のゼロ位置を自動設定し、関節角度をリアルタイム表示。
-
-**使用方法**：
-```bash
-uv run python example/2_zero_and_read.py
-```
-
----
-
-### 運動学テスト
-
-#### 5️⃣ 順運動学テスト (`5_fk_test.py`)
-
-関節角度からエンドエフェクタ姿勢を計算。
-
-**入力**：6 関節角度（度）
-
-**出力**：
-- エンドエフェクタ位置 (X, Y, Z) — 単位：メートル
-- 回転行列 (3×3)
-- オイラー角 (ロール/ピッチ/ヨー) — 単位：度
-
-**例**：
-```bash
-uv run python example/5_fk_test.py
-> 0 0 0 0 0 0
-> 45 -30 15 -60 90 180
-```
-
----
-
-#### 6️⃣ 逆運動学テスト (`6_ik_test.py`)
-
-希望するエンドエフェクタ姿勢から関節角度を求解。
-
-**入力形式**：
-- 位置のみ：`<x> <y> <z>`（メートル）
-- 位置 + 姿勢：`<x> <y> <z> <roll> <pitch> <yaw>`（度）
-
-**例**：
-```bash
-uv run python example/6_ik_test.py
-> 0.25 0.0 0.15              # 位置のみ
-> 0.25 0.0 0.15 0 0 0        # 位置 + 姿勢
-```
-
----
-
-### 実機制御
-
-:::tip 権限設定
-実機制御サンプルを実行する前に、デバイスの権限を設定する必要があります：
-
-```bash
-# シリアルデバイスの権限を設定（達妙 USB2CAN）
-sudo chmod 666 /dev/ttyACM0
-
-# または CAN インターフェース（例：can0）
-sudo chmod 666 /dev/can0
-```
-:::
-
-#### 7️⃣ IK リアルタイム制御 (`7_arm_ik_control.py`)
-
-IK ソルバーに基づくロボットアームリアルタイムエンドエフェクタ制御。
-
-**インタラクティブコマンド**：
-| コマンド | 説明 |
-|---------|------|
-| `x y z [roll pitch yaw]` | 目標エンドエフェクタ姿勢 |
-| `state` | 現在の状態/目標状態 |
-| `pos` | 現在のエンドエフェクタ位置 |
-| `q/quit/exit` | 終了 |
-
-**使用方法**：
-```bash
-uv run python example/7_arm_ik_control.py
-> 0.3 0.0 0.2
-> 0.3 0.1 0.25 0 0.5 0
-```
-
----
-
-#### 8️⃣ 軌道計画制御 (`8_arm_traj_control.py`)
-
-SE(3) 測地線軌道計画 + CLIK 追従。
-
-**入力形式**：
-```
-x y z [roll pitch yaw] [duration]
-```
-
-**パラメータ**：
-- `x, y, z`: 目標位置（メートル）
-- `roll, pitch, yaw`: 目標姿勢（ラジアン）
-- `duration`: 移動時間（秒）、デフォルト 2.0 秒
-
-**使用方法**：
-```bash
-uv run python example/8_arm_traj_control.py
-> 0.3 0.0 0.3 0 0.4 0 2.0
-```
-
----
-
-#### 9️⃣ 重力補償制御 (`9_gravity_compensation.py`)
-
-Pinocchio 动力学モデルを使用して関節の重力を補償します。
-
-**制御則**：
-```
-tau = g(q)          — 重力フォワード
-pos = 現在のモーター位置 — 関節位置は現在位置に従う
-kp = 2,  kd = 1     — すべての関節で統一された剛性/ダンピング
-```
-
-**期待される動作**：
-- ロボットアームは任意の姿勢で「浮遊」できます
-- 離しても自重で落下しません
-- 任意の位置に手で動かすことができます
-
-**使用方法**：
-```bash
-uv run python example/9_gravity_compensation.py
-```
-
-**出力**：
-- 各関節の期待トルクをリアルタイム表示（N·m）
-- `Ctrl+C` で停止して接続を切断
+**権限**: Linux 実機制御 → 事前に `sudo chmod 666 /dev/ttyACM0` または `/dev/can0`; Windows → chmod 不要。
 
 ---
 
 ## 📄 ライセンス
 
-本プロジェクトは **MIT ライセンス** の下でオープンソースです。
+MIT
 
 ---
 
 ## ☎ お問い合わせ
 
-- **技術サポート**: [Issue を提出](https://github.com/vectorBH6/reBotArm_control_py/issues)
-- **リポジトリ**: [GitHub](https://github.com/vectorBH6/reBotArm_control_py)
-
----
-
-<p align="center">
-  <strong>🌟 このプロジェクトが役に立った場合は、Star をつけてサポートしてください！</strong>
-</p>
+- Issue: https://github.com/vectorBH6/reBotArm_control_py/issues
+- Repo: https://github.com/vectorBH6/reBotArm_control_py

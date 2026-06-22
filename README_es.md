@@ -1,119 +1,100 @@
 # Guía de Inicio de Pinocchio y MeshCat para reBot Arm B601-DM
 
 <p align="center">
-    <a href="./LICENSE">
-        <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="Licencia: MIT">
-    </a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="Licencia: MIT"></a>
     <img src="https://img.shields.io/badge/Python-3.10+-blue.svg" alt="Versión Python">
-    <img src="https://img.shields.io/badge/Plataforma-Linux%20%7C%20Ubuntu-orange.svg" alt="Plataforma">
+    <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20Windows-orange.svg" alt="Plataforma">
     <img src="https://img.shields.io/badge/Framework-Pinocchio-yellow.svg" alt="Pinocchio">
 </p>
 
-<p align="center">
-  <strong>Brazo Robótico de 6-DOF · Soporte Multi-Motores · Solucionador Cinemático · Planificación de Trayectoria · Totalmente Open Source</strong>
-</p>
+<p align="center"><strong>Brazo Robótico 6-DOF · Multi-Motor · Cinemática · Planificación de Trayectoria · Licencia MIT</strong></p>
 
 <p align="center">
-  <strong>
     <a href="./README_zh.md">简体中文</a> &nbsp;|&nbsp;
     <a href="./README.md">English</a> &nbsp;|&nbsp;
     <a href="./README_JP.md">日本語</a>&nbsp;|&nbsp;
     <a href="./README_Fr.md">français</a>&nbsp;|&nbsp;
     <a href="./README_es.md">Español</a>
-  </strong>
 </p>
 
 ---
 
 ## 📖 Introducción
 
-**reBotArm Control** es una biblioteca de control Python para el brazo robótico reBot Arm B601, que proporciona una solución completa desde el control de motores de bajo nivel hasta el cálculo cinemático de alto nivel.
+**reBotArm Control**: Biblioteca Python para brazos robóticos reBot Arm B601 — control de motores, cinemática, planificación de trayectorias.
 
-### ✨ Características Principales
-
-- 🦾 **Doble Modelo** — B601-DM (motores Damiao) y B601-RS (motores RobStride)
-- 🧮 **Solucionador Cinemático** — Cinemática directa/inversa basada en Pinocchio
-- 🛤️ **Planificación de Trayectoria** — Trayectoria geodésica SE(3) + seguimiento CLIK
-- 🔧 **Configuración Flexible** — Archivo de configuración YAML para adaptación rápida del hardware
+- 🦾 Modelos duales: B601-DM (Damiao) / B601-RS (RobStride)
+- 🧮 Cinemática: FK/IK mediante Pinocchio
+- 🛤️ Trayectoria: Geodésica SE(3) + seguimiento CLIK
+- 🔧 Configuración: Basada en YAML
 
 ---
 
-## ⚙️ Inicio Rápido
+## ⚙️ Instalación (Linux / Windows)
 
-### Requisitos del Sistema
+### 1. Instalar Anaconda / Miniconda
+Descarga [Miniconda](https://docs.conda.io/en/latest/miniconda.html). En Windows, abre **Anaconda PowerShell Prompt** (no PowerShell normal).
 
-| Elemento | Requisito |
-|---------|-----------|
-| **Python** | 3.10+ |
-| **Sistema Operativo** | Ubuntu 22.04+ |
-| **Interfaz de Comunicación** | Puente Serie USB2CAN o Interfaz CAN |
-
-### Pasos de Instalación
-
-#### Paso 1. Instalar uv (si no está instalado)
-
+### 2. Crear entorno e instalar dependencias
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-#### Paso 2. Sincronizar Entorno (Instalar Todas las Dependencias)
-
-```bash
+conda create -n robotarm python=3.10 -y
+conda activate robotarm
 git clone https://github.com/vectorBH6/reBotArm_control_py.git
 cd reBotArm_control_py
-uv sync
+pip install -e .
+pip install motorbridge
 ```
 
-:::tip
-`uv sync` creará automáticamente un entorno virtual (si no existe) e instalará todas las dependencias según `pyproject.toml` y `uv.lock`.
-:::
+> No uses el `.venv/` del proyecto. Siempre ejecuta `conda activate robotarm` primero.
+
+### 3. Verificar
+```bash
+motorbridge-cli scan --vendor robstride --channel can0@1000000 --start-id 1 --end-id 5
+```
+Deberías ver 5 motores (ajusta la cantidad a tu hardware).
+
+---
+
+## 🪟 Windows: PEAK PCAN-USB
+
+En Windows, `motorbridge` usa PCAN-Basic para comunicarse con adaptadores PCAN-USB.
+
+| Elemento | Qué hacer |
+|---|---|
+| **Controlador** | Descarga PCAN-Driver desde https://www.peak-system.com/quick-drivers (incluye `PCANBasic.dll` + PCAN-View) |
+| **Verificar DLL** | `Test-Path C:\Windows\System32\PCANBasic.dll` → `True` |
+| **Nombres de canal** | `can0` / `can1` → `PCAN_USBBUS1` / `PCAN_USBBUS2`; `can0@1000000` = 1 Mbps |
+| **Baudrates por defecto** | RS06 = 1 Mbps; RS00 / Damiao = 500 kbps |
+| **Editar config** | En `config/rebotarm_rs.yaml`, configura `channel: can0@1000000` (`rate` = Hz del bucle de control, no baudrate CAN) |
+| **Codificación YAML** | Windows usa GBK por defecto, lo que rompe archivos YAML con comentarios en chino. `rebotarm.py` ya usa `encoding="utf-8"` — no requiere cambios manuales. |
+| **Permisos** | No necesitas `chmod`; permite motorbridge en Defender / 360 si lo solicita |
+| **VM / WSL2** | PCAN-USB debe pasarse al host Windows; no usable directamente dentro de VMs |
+
+### Solución de problemas en Windows
+| Síntoma | Solución |
+|---|---|
+| `ModuleNotFoundError: motorbridge` | Entorno Python incorrecto → `conda activate robotarm` |
+| `UnicodeDecodeError: 'gbk'` | Ver fila de codificación YAML arriba |
+| Scan no responde | Prueba otro baudrate (`@500000` ↔ `@1000000`); verifica con PCAN-View |
+| Motor no responde | Verifica resistencias de terminación 120Ω; confirma que `motor_id` coincida con el scan |
 
 ---
 
 ## 🔌 Configuración de Hardware
 
-### Predeterminado: Puente Serie Damiao USB2CAN
+| Motor | Plataforma | Transporte | Canal / Puerto | Baudrate |
+|---|---|---|---|---|
+| Damiao | Linux | Puente serie | `/dev/ttyACM0` | 921600 |
+| Damiao | Linux/Windows | SocketCAN / PCAN | `can0@500000` | 500 kbps |
+| RS00 | Linux/Windows | SocketCAN / PCAN | `can0@500000` | 500 kbps |
+| RS06 | Linux/Windows | SocketCAN / PCAN | `can0@1000000` | 1 Mbps |
 
-El reBot Arm B601-DM utiliza por defecto el módulo de puente serie Damiao USB2CAN.
-
-**Conexión de Hardware**:
-1. Conecte el módulo USB2CAN a su computadora mediante cable USB
-2. El sistema lo reconocerá automáticamente como dispositivo `/dev/ttyACM0`
-
-**Verificación de Configuración**:
+SocketCAN en Linux:
 ```bash
-# Verificar dispositivo
-ls /dev/ttyACM0
-
-# Escanear motores
-motorbridge-cli scan --vendor damiao --transport dm-serial \
-    --serial-port /dev/ttyACM0 --serial-baud 921600
+sudo ip link set can0 up type can bitrate 1000000
 ```
 
-### Opcional: Interfaz CAN Estándar
-
-Uso de otros adaptadores USB-CAN (CANable, PCAN, etc.):
-
-```bash
-# Iniciar interfaz CAN
-sudo ip link set can0 up type can bitrate 500000
-
-# Verificar interfaz
-ip -details link show can0
-```
-
-### Configuración de Marcas de Motores
-
-| Marca de Motor | Transmisión | Configuración | Baud Rate |
-|---------------|-------------|---------------|-----------|
-| **Damiao** | Puente Serie | `dm-serial` | 921600 |
-| **Damiao** | Interfaz CAN | `socketcan` | 500000 |
-| **RobStride** | Interfaz CAN | `socketcan` | 500000 |
-
-:::tip
-- Para motores Damiao usando puente serie, debe establecer `--transport dm-serial`
-- Regla de ID de feedback: `feedback_id = motor_id + 0x10`
-:::
+El puente serie Damiao requiere `--transport dm-serial`. Regla de ID de feedback: `feedback_id = motor_id + 0x10`.
 
 ---
 
@@ -121,203 +102,41 @@ ip -details link show can0
 
 ```
 reBotArm_control_py/
-├── config/                     # Archivos de configuración
-│   └── robot.yaml              # Configuración de parámetros de articulaciones
-├── example/                    # Programas de ejemplo
-│   ├── Herramientas de Depuración/
-│   │   ├── 1_damiao_text.py        # Consola mono-motor
-│   │   └── 2_zero_and_read.py      # Calibración cero
-│   ├── Pruebas Cinemáticas/
-│   │   ├── 5_fk_test.py            # Cinemática directa
-│   │   └── 6_ik_test.py            # Cinemática inversa
-│   ├── Control Real/
-│   │   ├── 7_arm_ik_control.py     # Control IK tiempo real
-│   │   ├── 8_arm_traj_control.py   # Planificación de trayectoria
-│   │   └── 9_gravity_compensation.py  # Compensación de gravedad
-│   └── sim/                    # Herramientas de simulación
-├── reBotArm_control_py/        # Biblioteca principal
-│   ├── actuator/               # Módulo de actuador
-│   ├── kinematics/             # Módulo de cinemática
-│   ├── controllers/            # Módulo de controlador
-│   └── trajectory/             # Módulo de planificación de trayectoria
-├── urdf/                       # Modelo URDF
-└── README.md
+├── config/                 # Config YAML
+├── example/                # Ejemplos (numerados 0x01…9)
+├── reBotArm_control_py/    # Núcleo (actuator / kinematics / controllers / trajectory)
+└── urdf/                   # Modelo URDF
 ```
 
 ---
 
 ## 🎮 Programas de Ejemplo
 
-### Herramientas de Depuración
+Siempre ejecuta `conda activate robotarm` primero.
 
-#### 1️⃣ Consola Mono-Motor (`1_damiao_text.py`)
+| # | Archivo | Descripción |
+|---|---|---|
+| 0x01 | `0x01rs06_test.py` / `0x01damiao_test.py` | Consola mono-motor (`ping` / `enable` / `mode mit` / `mit <pos>`) |
+| 2 | `2_zero_and_read.py` | Calibración de cero + ángulos en tiempo real |
+| 3 | `3_mit_control.py` | Modo MIT (posición + velocidad + torque) |
+| 4 | `4_pos_vel_control.py` | Modo POS_VEL |
+| 5 | `5_fk_test.py` | FK: 6 ángulos articulares (°) → pose del efector |
+| 6 | `6_ik_test.py` | IK: pose del efector → ángulos articulares |
+| 7 | `7_arm_ik_control.py` | Control IK en tiempo real (`x y z [r p y]`) |
+| 8 | `8_arm_traj_control.py` | Geodésica SE(3) + CLIK (`x y z [r p y] [duration]`) |
+| 9 | `9_gravity_compensation.py` | Compensación de gravedad con Pinocchio (`tau = g(q)`, kp=2 kd=1) |
 
-Prueba directa de un solo motor con el SDK motorbridge, soporta tres modos de control.
-
-**Uso**:
-```bash
-uv run python example/1_damiao_text.py
-```
-
-**Comandos Interactivos**:
-| Comando | Descripción |
-|---------|-------------|
-| `mit <pos_deg> [vel kp kd tau]` | Modo MIT |
-| `posvel <pos_deg> [vlim]` | Modo POS_VEL |
-| `vel <vel_rad_s>` | Modo Velocidad |
-| `enable` / `disable` | Habilitar/Deshabilitar |
-| `set_zero` | Establecer posición cero |
-| `state` | Ver estado |
-
----
-
-#### 2️⃣ Calibración Cero y Monitoreo de Ángulo (`2_zero_and_read.py`)
-
-Establece automáticamente los ceros de todas las articulaciones y muestra los ángulos en tiempo real.
-
-**Uso**:
-```bash
-uv run python example/2_zero_and_read.py
-```
-
----
-
-### Pruebas Cinemáticas
-
-#### 5️⃣ Prueba de Cinemática Directa (`5_fk_test.py`)
-
-Calcula la pose del efector terminal desde los ángulos de las articulaciones.
-
-**Entrada**: 6 ángulos de articulaciones (grados)
-
-**Salida**:
-- Posición del efector (X, Y, Z) — Unidad: metros
-- Matriz de rotación (3×3)
-- Ángulos de Euler (Roll/Pitch/Yaw) — Unidad: grados
-
-**Ejemplo**:
-```bash
-uv run python example/5_fk_test.py
-> 0 0 0 0 0 0
-> 45 -30 15 -60 90 180
-```
-
----
-
-#### 6️⃣ Prueba de Cinemática Inversa (`6_ik_test.py`)
-
-Resuelve los ángulos de las articulaciones desde la pose deseada del efector.
-
-**Formato de Entrada**:
-- Solo posición: `<x> <y> <z>` (metros)
-- Posición + Orientación: `<x> <y> <z> <roll> <pitch> <yaw>` (grados)
-
-**Ejemplo**:
-```bash
-uv run python example/6_ik_test.py
-> 0.25 0.0 0.15              # Solo posición
-> 0.25 0.0 0.15 0 0 0        # Posición + Orientación
-```
-
----
-
-### Control Real
-
-:::tip Configuración de Permisos
-Antes de ejecutar los ejemplos de control real, necesita configurar los permisos del dispositivo:
-
-```bash
-# Establecer permiso del dispositivo serie (Damiao USB2CAN)
-sudo chmod 666 /dev/ttyACM0
-
-# O para la interfaz CAN (por ejemplo can0)
-sudo chmod 666 /dev/can0
-```
-:::
-
-#### 7️⃣ Control IK en Tiempo Real (`7_arm_ik_control.py`)
-
-Control en tiempo real del efector basado en el solucionador IK.
-
-**Comandos Interactivos**:
-| Comando | Descripción |
-|---------|-------------|
-| `x y z [roll pitch yaw]` | Pose objetivo del efector |
-| `state` | Ver estado actual/objetivo |
-| `pos` | Posición actual del efector |
-| `q/quit/exit` | Salir |
-
-**Uso**:
-```bash
-uv run python example/7_arm_ik_control.py
-> 0.3 0.0 0.2
-> 0.3 0.1 0.25 0 0.5 0
-```
-
----
-
-#### 8️⃣ Control de Planificación de Trayectoria (`8_arm_traj_control.py`)
-
-Planificación de trayectoria geodésica SE(3) + seguimiento CLIK.
-
-**Formato de Entrada**:
-```
-x y z [roll pitch yaw] [duration]
-```
-
-**Parámetros**:
-- `x, y, z`: Posición objetivo (metros)
-- `roll, pitch, yaw`: Orientación objetivo (radianes)
-- `duration`: Duración del movimiento (segundos), predeterminado 2.0s
-
-**Uso**:
-```bash
-uv run python example/8_arm_traj_control.py
-> 0.3 0.0 0.3 0 0.4 0 2.0
-```
-
----
-
-#### 9️⃣ Control de Compensación de Gravedad (`9_gravity_compensation.py`)
-
-Compensa la gravedad de las articulaciones usando el modelo dinámico Pinocchio.
-
-**Ley de Control**:
-```
-tau = g(q)          — Compensación de gravedad
-pos = posición actual del motor  — La posición sigue la posición actual
-kp = 2,  kd = 1     — Rigidez/amortiguación unificadas para todos los motores
-```
-
-**Comportamiento Esperado**:
-- El brazo robótico puede "flotar" en cualquier postura
-- No se cae por su propio peso cuando se suelta
-- Se puede mover manualmente a cualquier posición
-
-**Uso**:
-```bash
-uv run python example/9_gravity_compensation.py
-```
-
-**Salida**:
-- Visualización en tiempo real del par esperado para cada articulación (N·m)
-- Presione `Ctrl+C` para detener y desconectar
+**Permisos**: Control en máquina real en Linux → `sudo chmod 666 /dev/ttyACM0` o `/dev/can0` primero; en Windows → no necesitas chmod.
 
 ---
 
 ## 📄 Licencia
 
-Este proyecto es de código abierto bajo la **Licencia MIT**.
+MIT
 
 ---
 
-## ☎ Contáctenos
+## ☎ Contacto
 
-- **Soporte Técnico**: [Enviar Issue](https://github.com/vectorBH6/reBotArm_control_py/issues)
-- **Repositorio**: [GitHub](https://github.com/vectorBH6/reBotArm_control_py)
-
----
-
-<p align="center">
-  <strong>🌟 ¡Si este proyecto le es útil, por favor denos una Star!</strong>
-</p>
+- Issues: https://github.com/vectorBH6/reBotArm_control_py/issues
+- Repo: https://github.com/vectorBH6/reBotArm_control_py

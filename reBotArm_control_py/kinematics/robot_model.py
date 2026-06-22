@@ -26,14 +26,14 @@ def _hw_config() -> dict:
 
     hw_yaml = ""
     if _global_cfg.exists():
-        global_data = yaml.safe_load(_global_cfg.read_text()) or {}
+        global_data = yaml.safe_load(_global_cfg.read_text(encoding="utf-8")) or {}
         hw_yaml = global_data.get("hardware_yaml", hw_yaml)
 
     hw_path = _cfg_dir / hw_yaml
     if not hw_path.exists():
         raise FileNotFoundError(f"Hardware config not found: {hw_path}")
 
-    _hw_cfg_cache = yaml.safe_load(hw_path.read_text()) or {}
+    _hw_cfg_cache = yaml.safe_load(hw_path.read_text(encoding="utf-8")) or {}
     return _hw_cfg_cache
 
 
