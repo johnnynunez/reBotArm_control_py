@@ -29,6 +29,7 @@ def main() -> None:
 
     ctrl.start()
     print("--- 已启动末端位置控制器 ---\n")
+    print("--- End-effector pose controller started ---\n")
 
     while True:
         try:
