@@ -61,7 +61,7 @@ On Windows, `motorbridge` uses PCAN-Basic to communicate with PCAN-USB adapters.
 
 | Item | What to do |
 |---|---|
-| **Driver** | Download PCAN-Driver from https://www.peak-system.com/quick-drivers (includes `PCANBasic.dll` + PCAN-View) |
+| **Driver** | Download PCAN-Driver from https://www.peak-system.com/fileadmin/media/files/PEAK-System_Driver-Setup.zip (includes `PCANBasic.dll` + PCAN-View) |
 | **Verify DLL** | `Test-Path C:\Windows\System32\PCANBasic.dll` → `True` |
 | **Channel naming** | `can0` / `can1` → `PCAN_USBBUS1` / `PCAN_USBBUS2`; `can0@1000000` = 1 Mbps |
 | **Default baudrates** | RS06 = 1 Mbps; RS00 / Damiao = 500 kbps |
@@ -114,7 +114,7 @@ reBotArm_control_py/
 
 Always run with `conda activate robotarm` first.
 
-| # | File | Description |
+| # | File |描述|
 |---|---|---|
 | 0x01 | `0x01rs06_test.py` / `0x01damiao_test.py` | Single motor console (`ping` / `enable` / `mode mit` / `mit <pos>`) |
 | 2 | `2_zero_and_read.py` | Zero calibration + real-time angles |
