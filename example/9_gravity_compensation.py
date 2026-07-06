@@ -67,8 +67,6 @@ def gravity_compensation_controller(r: RebotArm, dt: float) -> None:
     q = r.arm.get_positions(request_feedback=False)
     # 计算广义重力向量 / Compute generalized gravity vector
     tau_g = compute_generalized_gravity(q=q)
-    # tau_g[1] *= 1.55  # joint2 额外补偿 / extra compensation for joint2
-    # tau_g[2] *= 1.55  # joint3 额外补偿 / extra compensation for joint3
 
     # MIT 模式: 位置闭环 + 重力前馈
     # MIT mode: position closed-loop + gravity feedforward
